@@ -4,6 +4,33 @@
 
 #define BLOCKSIZE 256
 
+typedef struct requiredInfo {
+   char info[4]; 
+} requiredInfo;
+
+typedef struct superblock {
+   requiredInfo required
+   unsigned int magicNumber;
+   unsigned int rootInode;
+   freeBlock *freeBlocks;
+} superblock;
+
+typedef struct inode {
+   requiredInfo required;
+   char[9] filename;
+   int size;
+} inode;
+
+typedef struct fileExtent {
+   requiredInfo required;
+   char data[BLOCKSIZE];
+   fileExtent nextFileExtent;
+} fileExtent;
+
+typedef struct freeBlock {
+   requiredInfo required;
+} freeBlock;
+
 /* Your program should use a 10240 Byte disk size giving you 40 blocks total. 
 This is a default size. You must be able to support different possible values */
 
@@ -13,11 +40,20 @@ This is a default size. You must be able to support different possible values */
 #define DEFAULT_DISK_NAME “tinyFSDisk”         
 
 typedef int fileDescriptor;
-/* Makes a blank TinyFS file system of size nBytes on the file specified by ‘filename’. This function should use the emulated disk library to open the specified file, and upon success, format the file to be mountable. This includes initializing all data to 0x00, setting magic numbers, initializing and writing the superblock and inodes, etc. Must return a specified success/error code. */
+/* Makes a blank TinyFS file system of size nBytes on the file specified by 
+‘filename’. This function should use the emulated disk library to open the 
+specified file, and upon success, format the file to be mountable. This includes 
+initializing all data to 0x00, setting magic numbers, initializing and writing 
+the superblock and inodes, etc. Must return a specified success/error code. */
 
 int tfs_mkfs(char *filename, int nBytes);
 
-/* tfs_mount(char *filename) “mounts” a TinyFS file system located within ‘filename’. tfs_unmount(void) “unmounts” the currently mounted file system. As part of the mount operation, tfs_mount should verify the file system is the correct type. Only one file system may be mounted at a time. Use tfs_unmount to cleanly unmount the currently mounted file system. Must return a specified success/error code. */
+/* tfs_mount(char *filename) “mounts” a TinyFS file system located within 
+‘filename’. tfs_unmount(void) “unmounts” the currently mounted file system. 
+As part of the mount operation, tfs_mount should verify the file system is 
+the correct type. Only one file system may be mounted at a time. Use tfs_unmount 
+to cleanly unmount the currently mounted file system. Must return a specified 
+success/error code. */
 
 int tfs_mount(char *filename);
 
@@ -56,5 +92,3 @@ int tfs_readByte(fileDescriptor FD, char *buffer);
 Returns success/error codes.*/
 
 int tfs_seek(fileDescriptor FD, int offset);
-
-#endif
