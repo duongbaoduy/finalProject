@@ -1,3 +1,6 @@
+#include <unistd.h>
+#include <fcntl.h>
+#include "libDisk.h"
 /* This functions opens a regular UNIX file and designates the first nBytes of 
 it as space for the emulated disk. nBytes should be an integral number of the 
 block size. If nBytes > 0 and there is already a file by the given filename, 
