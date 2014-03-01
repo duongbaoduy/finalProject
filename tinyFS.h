@@ -56,3 +56,5 @@ int tfs_readByte(fileDescriptor FD, char *buffer);
 Returns success/error codes.*/
 
 int tfs_seek(fileDescriptor FD, int offset);
+
+#endif
