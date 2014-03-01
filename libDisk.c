@@ -18,10 +18,11 @@ int openDisk(char *filename, int nBytes) {
       return fd;
    }
    else if(nBytes == 0) {
-      fd = open(filename, O_RDONLY);
+      fd = open(filename, O_RDWR);
    }
    else {
-      fd = open(filename, O_RDWR);
+      //let everyone be able to use this file!
+      fd = open(filename, O_CREAT | O_RDWR, S_IRWXU | S_IRWXG | S_IRWXO);
       lseek(fd, 0, SEEK_SET);
       lseek(fd, nBytes, SEEK_SET);
       write(fd, "\n", 1);
