@@ -1,0 +1,29 @@
+Superblock:
+0 type = 1;
+1 magicNumber = x45;
+2 blockNumber = 0;
+3 rootInode = 1;
+4 freeBlockList = [...];
+
+iNode:
+0 type = 2;
+1 magicNumber = x45;
+2 blockNumber =
+3-12 fileName = " ";
+13-14 size = (size of all blocks); //must update whenever we store data;
+15 data = //block number of data block =
+16+ iNodeList = ;
+
+FileExtent:
+0 type = 3;
+1 magicNum = x45;
+2 blockNum =
+3 iNode (block number) =
+4 next (block number) =
+5+ text =
+
+Free:
+0 type = 4;
+1 magicNum = x45;
+2 blockNum =
+3+ 0 // calloced
