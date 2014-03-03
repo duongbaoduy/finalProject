@@ -4,32 +4,36 @@
 
 #define BLOCKSIZE 256
 
-typedef struct requiredInfo {
-   char info[4]; 
-} requiredInfo;
+typedef struct RequiredInfo {
+   unsigned char type;
+   unsigned char magicNumber; 
+   unsigned char blockNumber;    
+} RequiredInfo;
 
-typedef struct superblock {
-   requiredInfo required
-   unsigned int magicNumber;
-   unsigned int rootInode;
-   freeBlock *freeBlocks;
-} superblock;
+typedef struct INode {
+   RequiredInfo required;
+   char *filename;
+   unsigned short size;
+   unsigned char data;
+   struct INode *iNodeList;
+} INode;
 
-typedef struct inode {
-   requiredInfo required;
-   char[9] filename;
-   int size;
-} inode;
+typedef struct FreeBlock {
+   RequiredInfo required;
+   struct FreeBlock *next;
+} FreeBlock;
 
-typedef struct fileExtent {
-   requiredInfo required;
-   char data[BLOCKSIZE];
-   fileExtent nextFileExtent;
-} fileExtent;
+typedef struct SuperBlock {
+   RequiredInfo required;
+   struct INode *rootInode;
+   FreeBlock *freeBlocks;
+} SuperBlock;
 
-typedef struct freeBlock {
-   requiredInfo required;
-} freeBlock;
+typedef struct FileExtent {
+   RequiredInfo required;
+   char data[BLOCKSIZE - 5];
+   struct FileExtent *nextFileExtent;
+} FileExtent;
 
 /* Your program should use a 10240 Byte disk size giving you 40 blocks total. 
 This is a default size. You must be able to support different possible values */
@@ -92,3 +96,4 @@ int tfs_readByte(fileDescriptor FD, char *buffer);
 Returns success/error codes.*/
 
 int tfs_seek(fileDescriptor FD, int offset);
+#endif
