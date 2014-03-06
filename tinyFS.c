@@ -90,7 +90,7 @@ INode *makeInode(unsigned char blockNum, char *filename, unsigned char data) {
    iNode->data = data;
    iNode->iNodeList = NULL;
    iNode->fileDescriptor = -1;
-   iNode->filePointer = 6;
+   iNode->filePointer = 0;
    
    return iNode;
 }
@@ -219,18 +219,18 @@ int tfs_readByte(fileDescriptor FD, char *buffer) {
    if(iNode->filePointer >= iNode->size) {
       return OUT_OF_BOUNDS_FLAG;
    }
-   
-   if(iNode->filePointer % (BLOCKSIZE - 1) == 0) {
-      printf("TRUTH: %d\n", sizeof(RequiredInfo) + sizeof(unsigned short) + sizeof(FileExtent *) == 6);
-      iNode->filePointer += 6;  
-   }
 
-   int blockNum = iNode->filePointer / (BLOCKSIZE - 1);
+   int blockNum = iNode->filePointer / (BLOCKSIZE - 6);
+   
+   if(iNode->filePointer % (BLOCKSIZE - 6) == 0) {
+      printf("TRUTH: %d\n", sizeof(RequiredInfo) + sizeof(unsigned short) + sizeof(FileExtent *) == 6);
+      blockNum++;
+   }
    
    FileExtent *fileExtent;
    findCorrectFileExtent(fileExtent, iNode->data, blockNum); 
    
-   memcpy(buffer, fileExtent + (iNode->filePointer %(BLOCKSIZE - 1)) , 1);
+   memcpy(buffer, fileExtent + 6 + (iNode->filePointer %(BLOCKSIZE - 6)) , 1);
    iNode->filePointer++;
 
    return 1;
