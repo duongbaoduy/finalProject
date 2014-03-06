@@ -38,17 +38,18 @@ INode *makeInode(unsigned char blockNum, char *filename, unsigned char data) {
    requiredInfo.magicNumber = 0x45;
    requiredInfo.blockNumber = blockNum;
    
-   rootINode->required = requiredInfo;
-   rootINode->filename = filename;
-   rootINode->size = 15;
-   rootINode->data = data;
-   rootINode->iNodeList = NULL;
+   iNode->required = requiredInfo;
+   iNode->filename = filename;
+   iNode->size = 0;
+   iNode->data = data;
+   iNode->iNodeList = NULL;
+   iNode->fileDescriptor = -1;
+   iNode->filePointer = 6;
    
    return iNode;
 }
 FreeBlock *makeFreeBlock(int blockNum) {
    RequiredInfo requiredInfo;
-   INode *iNode = calloc(sizeof(INode), 1);
    
    requiredInfo.type = 4;
    requiredInfo.magicNumber = 0x45;
@@ -98,21 +99,26 @@ int tfs_mkfs(char *filename, int nBytes) {
    superBlock->rootInode = rootINode;
    
    FreeBlock *freeBlocks = NULL;
+   int numFreeBlocks = 0;
 
-      for(i = 2; i <  nBytes / BLOCKSIZE; i++) {
-         FreeBlock *fb = makeFreeBlock(i);
-         if(freeBlocks == NULL) {
-            freeBlocks = fb;
-         }
-         
-         FreeBlock *temp = freeBlocks;         
-         while(temp->next) {
-            temp = temp->next;
-         }
-         temp->next = fb;
+   for(i = 2; i <  nBytes / BLOCKSIZE; i++) {
+      FreeBlock *fb = makeFreeBlock(i);
+      if(freeBlocks == NULL) {
+         freeBlocks = fb;
       }
+      
+      FreeBlock *temp = freeBlocks;         
+      while(temp->next) {
+         temp = temp->next;
+      }
+      temp->next = fb;
+      numFreeBlocks++;
+   }
    
    superBlock->freeBlocks = freeBlocks;
+   superBlock->numberOfFreeBlocks = numFreeBlocks;
+ 
+   writeBlock(fd, 0, superBlock);
 }
 
 /* tfs_mount(char *filename) “mounts” a TinyFS file system located within
