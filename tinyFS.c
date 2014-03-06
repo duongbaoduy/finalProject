@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "tinyFS.h"
 #include "libDisk.h"
+#include "TinyFS_errno.h"
 #include <string.h>
 
 #define TYPE_OFFSET 0
@@ -28,7 +29,52 @@
 
 SuperBlock *superBlock;
 INode *rootINode;
-fileDescriptor fd;
+fileDescriptor disk;
+
+int checkMagicNumber(char magicNumber) {
+   if(magicNumber != MAGIC_NUMBER) {
+         printf("CORRUPTED DATA!!!!!\n");
+         return CORRUPTED_DATA_FLAG;
+   }
+   
+   return 0;
+}
+
+INode *findInodeRelatingToFile(int fd, INode *currentInode) {
+   if(!currentInode) {
+      return NULL;
+   }
+   
+   if(fd == currentInode->fileDescriptor) {
+      return currentInode;
+   }
+   
+   INode *current = currentInode->iNodeList;
+   while(current) {
+      INode *found = findInodeRelatingToFile(fd, current);
+      if(found) {
+         return found;
+      }
+      current = current->iNodeList;
+   }
+   
+   return NULL;
+
+}
+
+void findCorrectFileExtent(FileExtent *fileExtent, int blockNum, int numBlocksToReadThrough) {
+   char buffer[BLOCKSIZE];
+
+   while(numBlocksToReadThrough >= 0) {
+      readBlock(disk, blockNum, buffer);
+      memcpy(fileExtent, buffer, BLOCKSIZE);
+      
+      numBlocksToReadThrough--;
+      if(fileExtent->nextFileExtent) {
+         blockNum = fileExtent->nextFileExtent->required.blockNumber;
+      }
+   }
+}
 
 INode *makeInode(unsigned char blockNum, char *filename, unsigned char data) {
    RequiredInfo requiredInfo;
@@ -67,7 +113,7 @@ void cleanBlock(int blockNum) {
    memset(buffer + TYPE_OFFSET, FREE_TYPE, 1);
    memset(buffer + MAGIC_NUMBER_OFFSET, MAGIC_NUMBER, 1);
    memset(buffer + BLOCK_NUMBER_OFFSET, blockNum, 1);
-   writeBlock(fd, blockNum, buffer);
+   writeBlock(disk, blockNum, buffer);
 }
 
 /* Makes a blank TinyFS file system of size nBytes on the file specified by
@@ -78,7 +124,7 @@ the superblock and inodes, etc. Must return a specified success/error code. */
 
 int tfs_mkfs(char *filename, int nBytes) {
    
-   fd = openDisk(filename, nBytes);
+   disk = openDisk(filename, nBytes);
    
    int i = 0;
    for(i = 0; i < nBytes / BLOCKSIZE; i++) {
@@ -88,7 +134,7 @@ int tfs_mkfs(char *filename, int nBytes) {
    superBlock = calloc(sizeof(SuperBlock), 1);
    
    rootINode = makeInode(1, "rootNode", 0);
-   writeBlock(fd, 1, rootINode);
+   writeBlock(disk, 1, rootINode);
    
    RequiredInfo requiredInfo;
    requiredInfo.type = 1;
@@ -118,7 +164,7 @@ int tfs_mkfs(char *filename, int nBytes) {
    superBlock->freeBlocks = freeBlocks;
    superBlock->numberOfFreeBlocks = numFreeBlocks;
  
-   writeBlock(fd, 0, superBlock);
+   writeBlock(disk, 0, superBlock);
 }
 
 /* tfs_mount(char *filename) “mounts” a TinyFS file system located within
@@ -159,7 +205,38 @@ pointer location and incrementing it by one upon success. If the file pointer is
 already at the end of the file then tfs_readByte() should return an error and not
 increment the file pointer. */
 
-int tfs_readByte(fileDescriptor FD, char *buffer);
+int tfs_readByte(fileDescriptor FD, char *buffer) {
+   INode *iNode = findInodeRelatingToFile(FD, superBlock->rootInode);
+   if(!iNode) {
+      printf("COULDNT FIND THE FILE :(\n");
+      return FILE_NOT_FOUND;
+   }
+   
+   if(checkMagicNumber(iNode->required.magicNumber) < 0) {
+      return CORRUPTED_DATA_FLAG;
+   }
+   
+   if(iNode->filePointer >= iNode->size) {
+      return OUT_OF_BOUNDS_FLAG;
+   }
+   
+   if(iNode->filePointer % (BLOCKSIZE - 1) == 0) {
+      printf("TRUTH: %d\n", sizeof(RequiredInfo) + sizeof(unsigned short) + sizeof(FileExtent *) == 6);
+      iNode->filePointer += 6;  
+   }
+
+   int blockNum = iNode->filePointer / (BLOCKSIZE - 1);
+   
+   FileExtent *fileExtent;
+   findCorrectFileExtent(fileExtent, iNode->data, blockNum); 
+   
+   memcpy(buffer, fileExtent + (iNode->filePointer %(BLOCKSIZE - 1)) , 1);
+   iNode->filePointer++;
+
+   return 1;
+   
+   
+}
 
 /* change the file pointer location to offset (absolute).
 Returns success/error codes.*/
