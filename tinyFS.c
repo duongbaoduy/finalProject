@@ -30,6 +30,7 @@
 SuperBlock *superBlock;
 INode *rootINode;
 fileDescriptor disk;
+int isMounted = 0;
 
 int checkMagicNumber(char magicNumber) {
    if(magicNumber != MAGIC_NUMBER) {
@@ -62,11 +63,13 @@ INode *findInodeRelatingToFile(int fd, INode *currentInode) {
 
 }
 
-void findCorrectFileExtent(FileExtent *fileExtent, int blockNum, int numBlocksToReadThrough) {
+int findCorrectFileExtent(FileExtent *fileExtent, int blockNum, int numBlocksToReadThrough) {
    char buffer[BLOCKSIZE];
 
    while(numBlocksToReadThrough >= 0) {
-      readBlock(disk, blockNum, buffer);
+      if(readBlock(disk, blockNum, buffer) == - 1) {
+         return READ_WRITE_ERROR;
+      }
       memcpy(fileExtent, buffer, BLOCKSIZE);
       
       numBlocksToReadThrough--;
@@ -108,12 +111,14 @@ FreeBlock *makeFreeBlock(int blockNum) {
    return freeBlock;
 }
 
-void cleanBlock(int blockNum) {
+int cleanBlock(int blockNum) {
    char *buffer = calloc(BLOCKSIZE, 1);
    memset(buffer + TYPE_OFFSET, FREE_TYPE, 1);
    memset(buffer + MAGIC_NUMBER_OFFSET, MAGIC_NUMBER, 1);
    memset(buffer + BLOCK_NUMBER_OFFSET, blockNum, 1);
-   writeBlock(disk, blockNum, buffer);
+   if(writeBlock(disk, blockNum, buffer) == - 1) {
+      return READ_WRITE_ERROR;
+   }
 }
 
 /* Makes a blank TinyFS file system of size nBytes on the file specified by
@@ -125,16 +130,26 @@ the superblock and inodes, etc. Must return a specified success/error code. */
 int tfs_mkfs(char *filename, int nBytes) {
    
    disk = openDisk(filename, nBytes);
+  
+   if(disk < 0) {
+      printf("CANT FIND DISK!\n");
+      return DISK_ERROR;
+   }
    
    int i = 0;
    for(i = 0; i < nBytes / BLOCKSIZE; i++) {
-      cleanBlock(i);
+      if(cleanBlock(i) < 0) {
+         return READ_WRITE_ERROR;
+      }
    }
    
    superBlock = calloc(sizeof(SuperBlock), 1);
    
    rootINode = makeInode(1, "rootNode", 0);
-   writeBlock(disk, 1, rootINode);
+  
+   if(writeBlock(disk, 1, rootINode) == - 1) {
+      return READ_WRITE_ERROR;
+   }
    
    RequiredInfo requiredInfo;
    requiredInfo.type = 1;
@@ -164,7 +179,12 @@ int tfs_mkfs(char *filename, int nBytes) {
    superBlock->freeBlocks = freeBlocks;
    superBlock->numberOfFreeBlocks = numFreeBlocks;
  
-   writeBlock(disk, 0, superBlock);
+   if(writeBlock(disk, 0, superBlock) == -1) {
+      printf("WRITE ERROR\n");
+      return READ_WRITE_ERROR;
+   }
+   
+   return 1;
 }
 
 /* tfs_mount(char *filename) “mounts” a TinyFS file system located within
@@ -174,9 +194,40 @@ the correct type. Only one file system may be mounted at a time. Use tfs_unmount
 to cleanly unmount the currently mounted file system. Must return a specified
 success/error code. */
 
-int tfs_mount(char *filename);
+int tfs_mount(char *filename) {
+   if(isMounted) {
+      printf("WARNING UNMOUNTING PREVIOUS FILE SYSTEM\n");
+   }
+   tfs_unmount();
+   
+   char buffer[BLOCKSIZE];
+   disk = openDisk(filename, DEFAULT_DISK_SIZE);
+   if(disk < 0) {
+      return DISK_ERROR;
+   }
+   readBlock(disk, 0, buffer);
+   SuperBlock *superBlock;
+   
+   memcpy(superBlock, buffer, BLOCKSIZE);
+   
+   if(superBlock->required.type != SUPERBLOCK_TYPE 
+      || superBlock->required.magicNumber != MAGIC_NUMBER) {
+       return DISK_ERROR;
+   }
+   isMounted = 1;
+   
+   return 1;
+}
 
-int tfs_unmount(void);
+int tfs_unmount(void) {
+
+   if(!isMounted) {
+      return 1;
+   }
+   isMounted = 0;
+   
+   return 1;
+}
 
 /* Opens a file for reading and writing on the currently mounted file system.
 Creates a dynamic resource table entry for the file, and returns a file descriptor
@@ -228,9 +279,11 @@ int tfs_readByte(fileDescriptor FD, char *buffer) {
    }
    
    FileExtent *fileExtent;
-   findCorrectFileExtent(fileExtent, iNode->data, blockNum); 
+   if(findCorrectFileExtent(fileExtent, iNode->data, blockNum) < 0) {
+      return READ_WRITE_ERROR;
+   } 
    
-   memcpy(buffer, fileExtent + 6 + (iNode->filePointer %(BLOCKSIZE - 6)) , 1);
+   memcpy(buffer, fileExtent + 6 + (iNode->filePointer % (BLOCKSIZE - 6)) , 1);
    iNode->filePointer++;
 
    return 1;
@@ -241,4 +294,23 @@ int tfs_readByte(fileDescriptor FD, char *buffer) {
 /* change the file pointer location to offset (absolute).
 Returns success/error codes.*/
 
-int tfs_seek(fileDescriptor FD, int offset);
+int tfs_seek(fileDescriptor FD, int offset) {
+   INode *iNode = findInodeRelatingToFile(FD, superBlock->rootInode);
+   if(!iNode) {
+      printf("COULDNT FIND THE FILE :(\n");
+      return FILE_NOT_FOUND;
+   }
+   
+   if(checkMagicNumber(iNode->required.magicNumber) < 0) {
+      return CORRUPTED_DATA_FLAG;
+   }
+   
+   if(iNode->filePointer >= iNode->size) {
+      return OUT_OF_BOUNDS_FLAG;
+   }
+   
+   iNode->filePointer = offset;
+
+   
+   return 1;
+}
