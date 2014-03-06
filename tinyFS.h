@@ -16,6 +16,8 @@ typedef struct INode {
    unsigned short size;
    unsigned char data;
    struct INode *iNodeList;
+   short fileDescriptor; // needed because we could  have two of the same file names.
+   char *filePointer; // might not be needed but including for now
 } INode;
 
 typedef struct FreeBlock {
@@ -27,12 +29,14 @@ typedef struct SuperBlock {
    RequiredInfo required;
    struct INode *rootInode;
    FreeBlock *freeBlocks;
+   unsigned short numberOfFreeBlocks;
 } SuperBlock;
 
 typedef struct FileExtent {
    RequiredInfo required;
-   char data[BLOCKSIZE - 5];
+   unsigned short iNodeBlockNumber;
    struct FileExtent *nextFileExtent;
+   char data[BLOCKSIZE - 6];
 } FileExtent;
 
 /* Your program should use a 10240 Byte disk size giving you 40 blocks total. 
