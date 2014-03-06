@@ -3,5 +3,7 @@
 #define CORRUPTED_DATA_FLAG -1
 #define OUT_OF_BOUNDS_FLAG -2
 #define FILE_NOT_FOUND -3
+#define DISK_ERROR -4
+#define READ_WRITE_ERROR -5
 
 #endif
