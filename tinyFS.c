@@ -364,3 +364,49 @@ int tfs_readFileInfo(fileDescriptor FD) {
 
    return 1;
 }
+
+int tfs_rename() {
+
+
+   return 1;
+}
+
+int tfs_readdir() {
+
+
+   return 1;
+}
+
+int tfs_createDir(char *dirName) {
+
+
+   return 1;
+}
+
+int tfs_removeDir(char *dirName) {
+
+
+   return 1;
+}
+
+int tfs_removeAll(char *dirName) {
+
+
+   return 1;
+}
+
+int tfs_makeRO(char *name) {
+
+
+   return 1;
+}
+
+int tfs_makeRW(char *name) {
+
+   return 1 ;
+}
+
+int tfs_writeByte(fileDescriptor FD, unsigned int data) {
+
+   return 1;
+}
