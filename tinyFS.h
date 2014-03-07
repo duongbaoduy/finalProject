@@ -1,7 +1,7 @@
 #ifndef TINYFS_H
 #define TINYFS_H
 /* The default size of the disk and file system block */
-
+#include <time.h>
 #define BLOCKSIZE 256
 
 typedef struct RequiredInfo {
@@ -16,8 +16,11 @@ typedef struct INode {
    unsigned short size;
    unsigned char data;
    struct INode *iNodeList;
-   short fileDescriptor; // needed because we could  have two of the same file names.
-   char *filePointer; // might not be needed but including for now
+   short fileDescriptor; // needed because we could  have two of the same files.
+   unsigned short filePointer; // might not be needed but including for now
+   time_t creation;
+   time_t access;
+   time_t modification;
 } INode;
 
 typedef struct FreeBlock {
