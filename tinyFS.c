@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <time.h>
 #include "tinyFS.h"
 #include "libDisk.h"
 #include "TinyFS_errno.h"
-#include <string.h>
 
 #define TYPE_OFFSET 0
 #define MAGIC_NUMBER 0x45
@@ -129,9 +130,9 @@ the superblock and inodes, etc. Must return a specified success/error code. */
 
 int tfs_mkfs(char *filename, int nBytes) {
    
-   disk = openDisk(filename, nBytes);
+   int nonMountedDisk = openDisk(filename, nBytes);
   
-   if(disk < 0) {
+   if(nonMountedDisk < 0) {
       printf("CANT FIND DISK!\n");
       return DISK_ERROR;
    }
@@ -147,7 +148,7 @@ int tfs_mkfs(char *filename, int nBytes) {
    
    rootINode = makeInode(1, "rootNode", 0);
   
-   if(writeBlock(disk, 1, rootINode) == - 1) {
+   if(writeBlock(nonMountedDisk, 1, rootINode) == - 1) {
       return READ_WRITE_ERROR;
    }
    
@@ -179,7 +180,7 @@ int tfs_mkfs(char *filename, int nBytes) {
    superBlock->freeBlocks = freeBlocks;
    superBlock->numberOfFreeBlocks = numFreeBlocks;
  
-   if(writeBlock(disk, 0, superBlock) == -1) {
+   if(writeBlock(nonMountedDisk, 0, superBlock) == -1) {
       printf("WRITE ERROR\n");
       return READ_WRITE_ERROR;
    }
@@ -206,7 +207,6 @@ int tfs_mount(char *filename) {
       return DISK_ERROR;
    }
    readBlock(disk, 0, buffer);
-   SuperBlock *superBlock;
    
    memcpy(superBlock, buffer, BLOCKSIZE);
    
@@ -218,13 +218,15 @@ int tfs_mount(char *filename) {
    
    return 1;
 }
-
+//MIGHT WANT TO CLEAR EVERYTHING
 int tfs_unmount(void) {
 
    if(!isMounted) {
       return 1;
    }
    isMounted = 0;
+   superBlock = NULL;
+   rootINode == NULL;
    
    return 1;
 }
@@ -234,18 +236,45 @@ Creates a dynamic resource table entry for the file, and returns a file descript
 (integer) that can be used to reference this file while the filesystem is mounted.
 */
 
-fileDescriptor tfs_openFile(char *name);
+fileDescriptor tfs_openFile(char *name) {
+   //error handling
+   INode *iNode;
+   
+   time_t ctime = time(NULL);
+   iNode->creation = ctime;
+   iNode->modification = ctime;
+   iNode->access = ctime;
+   
+   writeBlock(disk, iNode->required.blockNumber, iNode);
+}
 
 /* Closes the file, de-allocates all system/disk resources,
 and removes table entry */
 
-int tfs_closeFile(fileDescriptor FD);
+int tfs_closeFile(fileDescriptor FD) {
+   INode *iNode;
+
+   time_t ctime = time(NULL);
+   iNode->access = ctime;
+   
+   writeBlock(disk, iNode->required.blockNumber, iNode);
+}
 
 /* Writes buffer ‘buffer’ of size ‘size’, which represents an entire file’s
 content, to the file system. Sets the file pointer to 0 (the start of file)
 when done. Returns success/error codes. */
 
-int tfs_writeFile(fileDescriptor FD,char *buffer, int size);
+int tfs_writeFile(fileDescriptor FD,char *buffer, int size) {
+   //error handling
+   INode *iNode;
+   
+
+   time_t ctime = time(NULL);
+   iNode->modification = ctime;
+   iNode->access = ctime;
+   
+   writeBlock(disk, iNode->required.blockNumber, iNode);
+}
 
 /* deletes a file and marks its blocks as free on disk. */
 
@@ -282,13 +311,15 @@ int tfs_readByte(fileDescriptor FD, char *buffer) {
    if(findCorrectFileExtent(fileExtent, iNode->data, blockNum) < 0) {
       return READ_WRITE_ERROR;
    } 
-   
+
    memcpy(buffer, fileExtent + 6 + (iNode->filePointer % (BLOCKSIZE - 6)) , 1);
    iNode->filePointer++;
-
+   
+   time_t ctime = time(NULL);
+   iNode->access = ctime;
+   writeBlock(disk, iNode->required.blockNumber, iNode);
+   
    return 1;
-   
-   
 }
 
 /* change the file pointer location to offset (absolute).
@@ -310,7 +341,10 @@ int tfs_seek(fileDescriptor FD, int offset) {
    }
    
    iNode->filePointer = offset;
-
    
+   time_t ctime = time(NULL);
+   iNode->access = ctime;
+
+   writeBlock(disk, iNode->required.blockNumber, iNode);
    return 1;
 }
