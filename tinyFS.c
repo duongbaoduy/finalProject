@@ -360,7 +360,7 @@ int tfs_readFileInfo(fileDescriptor FD) {
       return CORRUPTED_DATA_FLAG;
    }
    
-   printf("Creation Time: %s", ctime(&(iNode->creation)));
+   printf("Creation Time: %s\n", ctime(&(iNode->creation)));
 
    return 1;
 }
