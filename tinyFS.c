@@ -348,3 +348,19 @@ int tfs_seek(fileDescriptor FD, int offset) {
    writeBlock(disk, iNode->required.blockNumber, iNode);
    return 1;
 }
+
+int tfs_readFileInfo(fileDescriptor FD) {
+   INode *iNode = findInodeRelatingToFile(FD, superBlock->rootInode);
+   if(!iNode) {
+      printf("COULDNT FIND THE FILE :(\n");
+      return FILE_NOT_FOUND;
+   }
+   
+   if(checkMagicNumber(iNode->required.magicNumber) < 0) {
+      return CORRUPTED_DATA_FLAG;
+   }
+   
+   printf("Creation Time: %s", ctime(&(iNode->creation)));
+
+   return 1;
+}
