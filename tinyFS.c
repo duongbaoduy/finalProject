@@ -33,6 +33,9 @@ INode *rootINode;
 fileDescriptor disk;
 int isMounted = 0;
 
+short fileDescriptorGenerator = 0;
+short openFiles[256]; // SET ALL TO ZERO IN MOUNT
+
 int checkMagicNumber(char magicNumber) {
    if(magicNumber != MAGIC_NUMBER) {
          printf("CORRUPTED DATA!!!!!\n");
@@ -231,54 +234,210 @@ int tfs_unmount(void) {
    return 1;
 }
 
+/*
+ * Helper function to find inode with fileName passed in
+ */
+INode *findInodeRelatingToFileName(char *fileName, INode *currentInode) {
+   if(!currentInode) {
+      return NULL;
+   }
+   
+   if(!strcmp(fileName, currentInode->fileName)) { // if the file names are the same
+      return currentInode;
+   }
+   
+   INode *current = currentInode->iNodeList;
+   while(current) {
+      INode *found = findInodeRelatingToFile(fileName, current);
+      if(found) {
+         return found;
+      }
+      current = current->iNodeList;
+   }
+   
+   return NULL;
+
+}
+
+/*
+ * Helper function to create a file
+ */
+INode *createFile(char *fileName) {
+   
+   //add new iNode to end of list, is it a list or a tree? how are directories being made?
+   
+   int blockNum = //how to find??
+   
+   INode *newInode = makeInode(blockNum, fileName, null); //data should be null during creation I believe? also mark as closed
+   // make from freeblock, add to inodelist, beginning or end if IM CRAZY
+   
+   newInode.fileDescriptor = // global fileDescriptorGenerator and then increment that
+   
+   return INode;
+
+}
+
 /* Opens a file for reading and writing on the currently mounted file system.
 Creates a dynamic resource table entry for the file, and returns a file descriptor
 (integer) that can be used to reference this file while the filesystem is mounted.
 */
 
 fileDescriptor tfs_openFile(char *name) {
-   //error handling
-   INode *iNode;
+
+	INode *iNode = findInodeRelatingToFileName(name, superBlock->rootInode); // does not address same names, talk to stephen about that
+	
+	// error message if already opened?
+	
+    if(!iNode) {
+	   iNode = createFile(name); // MAKE A NEW FILE 
+    }
+	
+	time_t ctime = time(NULL);
+    iNode->creation = ctime;
+    iNode->modification = ctime;
+    iNode->access = ctime;
    
-   time_t ctime = time(NULL);
-   iNode->creation = ctime;
-   iNode->modification = ctime;
-   iNode->access = ctime;
+    if(checkMagicNumber(iNode->required.magicNumber) < 0) {
+       return CORRUPTED_DATA_FLAG;
+    }
    
-   writeBlock(disk, iNode->required.blockNumber, iNode);
+    if(iNode->filePointer >= iNode->size) {
+       return OUT_OF_BOUNDS_FLAG;
+    }
+	
+	
+	int blockNum = //iNode->filePointer / (BLOCKSIZE - 6); // how does this work?
+    
+    iNode->status = 1; // 1 is for open
+	// how to add r + w? probably enums and another variable in inode
+	
+	filesOpen[fileDescriptor] = 1;
+	return iNode->fileDescriptor;
+	
 }
+	
 
 /* Closes the file, de-allocates all system/disk resources,
 and removes table entry */
 
 int tfs_closeFile(fileDescriptor FD) {
-   INode *iNode;
-
+   INode *iNode = findInodeRelatingToFile(FD, superBlock->rootInode);
+   if(!iNode) {
+      printf("COULDNT FIND THE FILE :(\n");
+      return FILE_NOT_FOUND;
+   }
+   
+   if(checkMagicNumber(iNode->required.magicNumber) < 0) {
+      return CORRUPTED_DATA_FLAG;
+   }
+   
+   if(iNode->filePointer >= iNode->size) {
+      return OUT_OF_BOUNDS_FLAG;
+   }
+   
    time_t ctime = time(NULL);
    iNode->access = ctime;
    
-   writeBlock(disk, iNode->required.blockNumber, iNode);
+   // what system/disk resources? make null?
+
+   // do we even need to go into fileExtent? having the iNode may be enough
+   FileExtent *fileExtent;
+   
+   
+   // check before, should we throw error if already closed or do nothing? probably do nothing
+   
+   filesOpen[iNode.fileDescriptor];
+   
+   // remember to writeBlock here
+   return 1;
 }
+	
 
 /* Writes buffer ‘buffer’ of size ‘size’, which represents an entire file’s
 content, to the file system. Sets the file pointer to 0 (the start of file)
 when done. Returns success/error codes. */
 
 int tfs_writeFile(fileDescriptor FD,char *buffer, int size) {
-   //error handling
-   INode *iNode;
-   
 
+   // check before if there is enough space to write the file
+   // in superblock->NumberOfFreeBlocks
+
+   INode *iNode = findInodeRelatingToFile(FD, superBlock->rootInode);
+   if(!iNode) {
+      printf("COULDNT FIND THE FILE :(\n");
+      return FILE_NOT_FOUND;
+   }
+   
+   if(checkMagicNumber(iNode->required.magicNumber) < 0) {
+      return CORRUPTED_DATA_FLAG;
+   }
+   
+   if(iNode->filePointer >= iNode->size) {
+      return OUT_OF_BOUNDS_FLAG;
+   }
+   
    time_t ctime = time(NULL);
    iNode->modification = ctime;
    iNode->access = ctime;
+
+   if (iNode->status = 0) {
+      //throw error because file is closed
+   }
+   if (iNode->readWriteFlags = cannotWriteToFile) {
+      //throw error because file can only be read from
+   }
+
+   // do we even need to go into fileExtent? having the iNode may be enough
+   FileExtent *fileExtent = //look in inode, create fileExtent if it does not exist, probably will not unless already written to
    
-   writeBlock(disk, iNode->required.blockNumber, iNode);
+   
+   
+   
+   // need to memcpy(file + sizeofExtraBitsInHeader, buffer, size);
+   // if buffersize is too big, need to get another block, set the pointer in the parent block to the new block and keep writing
+   
+   // if i put everything into the structure, i can just write the structure down
+   
+   just copy things into filesystem
+   
+   // need to writeblock after every file io to update disk
+   
+   // call twice if i need two blocks
+   writeBlock(disk, fileExtent->required.blockNumber, fileExtent); // how to access current file in Inode? we have the whole block to write to, must seek to file location, rewrite writeBlock?
+   
+   return iNode->data;
 }
 
 /* deletes a file and marks its blocks as free on disk. */
 
-int tfs_deleteFile(fileDescriptor FD);
+int tfs_deleteFile(fileDescriptor FD) {
+	INode *iNode = findInodeRelatingToFileName(name, superBlock->rootInode); // does not address same names, talk to stephen about that
+	
+    if(!iNode) {
+	   //error no inode
+    }
+   
+    if(checkMagicNumber(iNode->required.magicNumber) < 0) {
+       return CORRUPTED_DATA_FLAG;
+    }
+   
+    if(iNode->filePointer >= iNode->size) {
+       return OUT_OF_BOUNDS_FLAG;
+    }
+	
+	int blockNum = //
+	
+	FileExtent *fileExtent;
+    if(findCorrectFileExtent(fileExtent, iNode->data, blockNum) < 0) { // is fileDescripter represented by iNode->data? I'm assuming so.
+       return READ_WRITE_ERROR;
+    }
+	
+	// clear blocks here, remember to add numberoffreeblocks back to list and increment number of free blocks
+	
+	// loop through linked list to reset pointers and then free that inode that i broke off the chain and add to numofFreeBlocks list
+	
+	return 1; //SUCCESS CODE
+}
 
 /* reads one byte from the file and copies it to buffer, using the current file
 pointer location and incrementing it by one upon success. If the file pointer is
