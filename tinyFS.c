@@ -92,7 +92,7 @@ INode *makeInode(unsigned char blockNum, char *filename, unsigned char data) {
    requiredInfo.blockNumber = blockNum;
    
    iNode->required = requiredInfo;
-   iNode->fileName = filename;
+   memcpy((iNode->fileName), filename, 8);
    iNode->size = 0;
    iNode->data = data;
    iNode->iNodeList = NULL;
@@ -530,14 +530,48 @@ int tfs_readFileInfo(fileDescriptor FD) {
    return 1;
 }
 
-int tfs_rename() {
+int tfs_rename(char *fileName, char* newName) {
+   
+   INode *iNode = findInodeRelatingToFileName(fileName, superBlock->rootInode);
+  
+   if(checkMagicNumber(iNode->required.magicNumber)) {
+      return CORRUPTED_DATA_FLAG;
+   }
+ 
+   if(!iNode) {
+      return FILE_NOT_FOUND;
+   }
+   
+   memcpy(iNode->fileName, newName, 8);
+   
+   time_t ctime = time(NULL);
+   iNode->modification = ctime;
 
+   writeBlock(disk, iNode->required.blockNumber, iNode);
 
    return 1;
 }
 
-int tfs_readdir() {
+void printFileAndDirectories(INode *currentInode) {
 
+   if(!currentInode) {
+      return;
+   }
+   
+   printf("%s\n", currentInode->fileName);
+   
+   INode *current = currentInode->iNodeList;
+   while(current) {
+      printFileAndDirectories(current);
+      current = current->iNodeList;
+   }
+   
+   return;
+
+}
+
+int tfs_readdir() {
+   
 
    return 1;
 }
@@ -561,7 +595,7 @@ int tfs_removeAll(char *dirName) {
 }
 
 int tfs_makeRO(char *name) {
-
+   
 
    return 1;
 }
