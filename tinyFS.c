@@ -14,14 +14,14 @@
 #define ROOT_INODE_OFFSET 3
 #define FREE_BLOCK_LIST_OFFSET 4
 //INODE
-#define FILE_NAME_OFFSET  3
-#define FILE_SIZE_OFFSET  13
+#define FILE_NAME_OFFSET 3
+#define FILE_SIZE_OFFSET 13
 #define DATE_BLOCK_NUMBER_OFFSET 15
-#define INODE_LIST_OFFSET  16
+#define INODE_LIST_OFFSET 16
 //FILEXTENT
 #define INODE_BLOCK_NUMBER_OFFSET 3
 #define NEXT_BLOCK_NUMBER_OFFSET 4
-#define TEXT_OFFSET  5
+#define TEXT_OFFSET 5
 //TYPES
 #define SUPERBLOCK_TYPE 1
 #define INODE_TYPE 2
@@ -92,7 +92,7 @@ INode *makeInode(unsigned char blockNum, char *filename, unsigned char data) {
    requiredInfo.blockNumber = blockNum;
    
    iNode->required = requiredInfo;
-   iNode->filename = filename;
+   iNode->fileName = filename;
    iNode->size = 0;
    iNode->data = data;
    iNode->iNodeList = NULL;
@@ -171,13 +171,14 @@ int tfs_mkfs(char *filename, int nBytes) {
       if(freeBlocks == NULL) {
          freeBlocks = fb;
       }
-      
-      FreeBlock *temp = freeBlocks;         
-      while(temp->next) {
-         temp = temp->next;
+      else {
+         FreeBlock *temp = freeBlocks;         
+         while(temp->next) {
+            temp = temp->next;
+         }
+         temp->next = fb;
+         numFreeBlocks++;
       }
-      temp->next = fb;
-      numFreeBlocks++;
    }
    
    superBlock->freeBlocks = freeBlocks;
@@ -202,6 +203,12 @@ int tfs_mount(char *filename) {
    if(isMounted) {
       printf("WARNING UNMOUNTING PREVIOUS FILE SYSTEM\n");
    }
+   
+   int i = 0;
+   for(i = 0; i < BLOCKSIZE; i++) {
+      openFiles[i] = 0;
+   }
+   
    tfs_unmount();
    
    char buffer[BLOCKSIZE];
@@ -211,7 +218,7 @@ int tfs_mount(char *filename) {
    }
    readBlock(disk, 0, buffer);
    
-   memcpy(superBlock, buffer, BLOCKSIZE);
+   superBlock = (SuperBlock *) buffer;
    
    if(superBlock->required.type != SUPERBLOCK_TYPE 
       || superBlock->required.magicNumber != MAGIC_NUMBER) {
@@ -235,8 +242,8 @@ int tfs_unmount(void) {
 }
 
 /*
- * Helper function to find inode with fileName passed in
- */
+* Helper function to find inode with fileName passed in
+*/
 INode *findInodeRelatingToFileName(char *fileName, INode *currentInode) {
    if(!currentInode) {
       return NULL;
@@ -248,7 +255,7 @@ INode *findInodeRelatingToFileName(char *fileName, INode *currentInode) {
    
    INode *current = currentInode->iNodeList;
    while(current) {
-      INode *found = findInodeRelatingToFile(fileName, current);
+      INode *found = findInodeRelatingToFileName(fileName, current);
       if(found) {
          return found;
       }
@@ -260,10 +267,10 @@ INode *findInodeRelatingToFileName(char *fileName, INode *currentInode) {
 }
 
 /*
- * Helper function to create a file
- */
+* Helper function to create a file
+*/
 INode *createFile(char *fileName) {
-   
+/*   
    //add new iNode to end of list, is it a list or a tree? how are directories being made?
    
    int blockNum = //how to find??
@@ -274,7 +281,7 @@ INode *createFile(char *fileName) {
    newInode.fileDescriptor = // global fileDescriptorGenerator and then increment that
    
    return INode;
-
+*/
 }
 
 /* Opens a file for reading and writing on the currently mounted file system.
@@ -283,16 +290,16 @@ Creates a dynamic resource table entry for the file, and returns a file descript
 */
 
 fileDescriptor tfs_openFile(char *name) {
+/*
+INode *iNode = findInodeRelatingToFileName(name, superBlock->rootInode); // does not address same names, talk to stephen about that
 
-	INode *iNode = findInodeRelatingToFileName(name, superBlock->rootInode); // does not address same names, talk to stephen about that
-	
-	// error message if already opened?
-	
+// error message if already opened?
+
     if(!iNode) {
-	   iNode = createFile(name); // MAKE A NEW FILE 
+      iNode = createFile(name); // MAKE A NEW FILE
     }
-	
-	time_t ctime = time(NULL);
+
+    time_t ctime = time(NULL);
     iNode->creation = ctime;
     iNode->modification = ctime;
     iNode->access = ctime;
@@ -304,24 +311,23 @@ fileDescriptor tfs_openFile(char *name) {
     if(iNode->filePointer >= iNode->size) {
        return OUT_OF_BOUNDS_FLAG;
     }
-	
-	
-	int blockNum = //iNode->filePointer / (BLOCKSIZE - 6); // how does this work?
+
+
+int blockNum = //iNode->filePointer / (BLOCKSIZE - 6); // how does this work?
     
     iNode->status = 1; // 1 is for open
-	// how to add r + w? probably enums and another variable in inode
-	
-	filesOpen[fileDescriptor] = 1;
-	return iNode->fileDescriptor;
-	
+// how to add r + w? probably enums and another variable in inode
+
+filesOpen[fileDescriptor] = 1;
+return iNode->fileDescriptor;
+*/
 }
-	
 
 /* Closes the file, de-allocates all system/disk resources,
 and removes table entry */
 
 int tfs_closeFile(fileDescriptor FD) {
-   INode *iNode = findInodeRelatingToFile(FD, superBlock->rootInode);
+/*   INode *iNode = findInodeRelatingToFile(FD, superBlock->rootInode);
    if(!iNode) {
       printf("COULDNT FIND THE FILE :(\n");
       return FILE_NOT_FOUND;
@@ -350,15 +356,14 @@ int tfs_closeFile(fileDescriptor FD) {
    
    // remember to writeBlock here
    return 1;
-}
-	
+*/}
 
 /* Writes buffer ‘buffer’ of size ‘size’, which represents an entire file’s
 content, to the file system. Sets the file pointer to 0 (the start of file)
 when done. Returns success/error codes. */
 
 int tfs_writeFile(fileDescriptor FD,char *buffer, int size) {
-
+/*
    // check before if there is enough space to write the file
    // in superblock->NumberOfFreeBlocks
 
@@ -406,15 +411,17 @@ int tfs_writeFile(fileDescriptor FD,char *buffer, int size) {
    writeBlock(disk, fileExtent->required.blockNumber, fileExtent); // how to access current file in Inode? we have the whole block to write to, must seek to file location, rewrite writeBlock?
    
    return iNode->data;
-}
+*/}
+
+
 
 /* deletes a file and marks its blocks as free on disk. */
 
 int tfs_deleteFile(fileDescriptor FD) {
-	INode *iNode = findInodeRelatingToFileName(name, superBlock->rootInode); // does not address same names, talk to stephen about that
-	
+/*INode *iNode = findInodeRelatingToFileName(name, superBlock->rootInode); // does not address same names, talk to stephen about that
+
     if(!iNode) {
-	   //error no inode
+//error no inode
     }
    
     if(checkMagicNumber(iNode->required.magicNumber) < 0) {
@@ -424,20 +431,19 @@ int tfs_deleteFile(fileDescriptor FD) {
     if(iNode->filePointer >= iNode->size) {
        return OUT_OF_BOUNDS_FLAG;
     }
-	
-	int blockNum = //
-	
-	FileExtent *fileExtent;
+
+
+    FileExtent *fileExtent;
     if(findCorrectFileExtent(fileExtent, iNode->data, blockNum) < 0) { // is fileDescripter represented by iNode->data? I'm assuming so.
        return READ_WRITE_ERROR;
     }
-	
-	// clear blocks here, remember to add numberoffreeblocks back to list and increment number of free blocks
-	
-	// loop through linked list to reset pointers and then free that inode that i broke off the chain and add to numofFreeBlocks list
-	
-	return 1; //SUCCESS CODE
-}
+
+// clear blocks here, remember to add numberoffreeblocks back to list and increment number of free blocks
+
+// loop through linked list to reset pointers and then free that inode that i broke off the chain and add to numofFreeBlocks list
+
+return 1; //SUCCESS CODE
+*/}
 
 /* reads one byte from the file and copies it to buffer, using the current file
 pointer location and incrementing it by one upon success. If the file pointer is
