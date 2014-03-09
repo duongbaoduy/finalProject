@@ -12,12 +12,12 @@ typedef struct RequiredInfo {
 
 typedef struct INode {
    RequiredInfo required;
-   char *filename;
+   char fileName[9];
    unsigned short size;
    unsigned char data;
    struct INode *iNodeList;
    short fileDescriptor; // needed because we could  have two of the same files.
-   unsigned short filePointer; // might not be needed but including for now
+   unsigned short filePointer; 
    time_t creation;
    time_t access;
    time_t modification;
