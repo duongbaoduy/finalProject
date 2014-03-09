@@ -413,8 +413,6 @@ int tfs_writeFile(fileDescriptor FD,char *buffer, int size) {
    return iNode->data;
 */}
 
-
-
 /* deletes a file and marks its blocks as free on disk. */
 
 int tfs_deleteFile(fileDescriptor FD) {
@@ -572,6 +570,9 @@ void printFileAndDirectories(INode *currentInode) {
 
 int tfs_readdir() {
    
+   if(superBlock->rootInode) {
+      printFileAndDirectories(superBlock->rootInode->iNodeList);
+   }
 
    return 1;
 }
@@ -606,6 +607,41 @@ int tfs_makeRW(char *name) {
 }
 
 int tfs_writeByte(fileDescriptor FD, unsigned int data) {
+
+   INode *iNode = findInodeRelatingToFile(FD, superBlock->rootInode);
+   if(!iNode) {
+      printf("COULDNT FIND THE FILE :(\n");
+      return FILE_NOT_FOUND;
+   }
+   
+   if(checkMagicNumber(iNode->required.magicNumber) < 0) {
+      return CORRUPTED_DATA_FLAG;
+   }
+   
+   if(iNode->filePointer >= iNode->size) {
+      return OUT_OF_BOUNDS_FLAG;
+   }
+
+   int blockNum = iNode->filePointer / (BLOCKSIZE - 6);
+   
+   if(iNode->filePointer % (BLOCKSIZE - 6) == 0) {
+      printf("TRUTH: %d\n", sizeof(RequiredInfo) + sizeof(unsigned short) + sizeof(FileExtent *) == 6);
+      blockNum++;
+   }
+   
+   FileExtent *fileExtent;
+   if(findCorrectFileExtent(fileExtent, iNode->data, blockNum) < 0) {
+      return READ_WRITE_ERROR;
+   } 
+
+   memset(fileExtent + 6 + (iNode->filePointer % (BLOCKSIZE - 6)), data, 1);
+   writeBlock(disk, fileExtent->required.blockNumber, fileExtent);
+   iNode->filePointer++;
+   
+   time_t ctime = time(NULL);
+   iNode->access = ctime;
+   writeBlock(disk, iNode->required.blockNumber, iNode);
+
 
    return 1;
 }
