@@ -42,7 +42,20 @@ int checkMagicNumber(char magicNumber) {
          return CORRUPTED_DATA_FLAG;
    }
    
-   return 0;
+   return 1;
+}
+
+int checkBlockType(char actualType, char type) {
+   return actualType != type ? -1 : 1;
+}
+
+int checkBlockNumber(char blockNumber, char correctNumber) {
+   if(blockNumber != correctNumber) {
+         printf("CORRUPTED DATA!!!!!\n");
+         return CORRUPTED_DATA_FLAG;
+   }
+   
+   return 1;
 }
 
 INode *findInodeRelatingToFile(int fd, INode *currentInode) {
@@ -203,31 +216,147 @@ int tfs_mount(char *filename) {
    if(isMounted) {
       printf("WARNING UNMOUNTING PREVIOUS FILE SYSTEM\n");
    }
-   
-   int i = 0;
-   for(i = 0; i < BLOCKSIZE; i++) {
-      openFiles[i] = 0;
-   }
-   
-   tfs_unmount();
-   
+  
    char buffer[BLOCKSIZE];
-   disk = openDisk(filename, DEFAULT_DISK_SIZE);
-   if(disk < 0) {
+   int diskToCheck = openDisk(filename, DEFAULT_DISK_SIZE);
+   
+   if(diskToCheck < 0) {
       return DISK_ERROR;
    }
-   readBlock(disk, 0, buffer);
+   readBlock(diskToCheck, 0, buffer);
    
-   superBlock = (SuperBlock *) buffer;
+   SuperBlock *superBlockToCheck = (SuperBlock *) buffer;
    
-   if(superBlock->required.type != SUPERBLOCK_TYPE 
-      || superBlock->required.magicNumber != MAGIC_NUMBER) {
+   if(superBlockToCheck->required.type != SUPERBLOCK_TYPE 
+      || superBlockToCheck->required.magicNumber != MAGIC_NUMBER) {
        return DISK_ERROR;
    }
-   isMounted = 1;
+   
+   if(checkForDiskError(diskToCheck, superBlockToCheck) < 0) {
+      printf("FILE SYSTEM IS NOT IN A CONSISTANT STATE\n");
+      return DISK_ERROR;
+   }
+   else {
+      int i = 0;
+      for(i = 0; i < BLOCKSIZE; i++) {
+         openFiles[i] = 0;
+      }
+      
+      superBlock = superBlockToCheck;
+      tfs_unmount();
+      isMounted = 1;
+      disk = diskToCheck;
+   }
+   return 1;
+}
+int checkForDiskError(int diskToCheck, SuperBlock *superBlockToCheck) {
+   int numberOfFreeBlocks = 0;
+   FreeBlock *freeBlock = superBlockToCheck->freeBlocks;
+   
+   //CHECK NUMBER OF FREE BLOCKS AND TYPE
+   while(freeBlock) {
+      FileExtent *fileExtent;
+      if(checkBlockType(freeBlock->required.type, FILE_EXTENT_TYPE) < 0) {
+         return DISK_ERROR;
+      }
+      freeBlock = freeBlock->next;
+      numberOfFreeBlocks++;
+   }
+   
+   if(superBlock->numberOfFreeBlocks != numberOfFreeBlocks) {
+      return DISK_ERROR;
+   }
+   
+   //CHECKING FOR CORRECT MAGIC NUMBERS AND BLOCK NUMBER
+   char buffer[BLOCKSIZE];
+   int i = 0;
+   //THIS IS GOING TO NEED TO BE CHANGED WITH NUMBYTES
+   for(i = 0; i < 10240 / BLOCKSIZE; i++) {
+      readBlock(diskToCheck, i, buffer);
+      if(checkMagicNumber(buffer[MAGIC_NUMBER_OFFSET]) < 0) {
+         return DISK_ERROR;
+      }
+      if(checkBlockNumber(buffer[BLOCK_NUMBER_OFFSET], i) < 0) {
+         return DISK_ERROR;
+      }
+   }
+   
+   //CHECKING ALL THE INODES FOR CORRECT TYPE AND COUNTING THEM
+   int numberOfInodes = checkAllInodes(superBlock->rootInode);
+   if(numberOfInodes < 0) {
+      return DISK_ERROR;
+   }
+   //CHECKING ALL FILE EXTENTS FOR CORRECT TYPE AND COUNTING THEM
+   int numberOfFileExtents = checkAllFileExtents(diskToCheck, superBlock);
+   if(numberOfFileExtents < 0) {
+      return DISK_ERROR;
+   }
+   if(numberOfFileExtents + numberOfInodes + numberOfFreeBlocks + 1 != 10240/ BLOCKSIZE) {
+      return DISK_ERROR;
+   }
    
    return 1;
 }
+
+int checkAllFileExtents(int diskToCheck, SuperBlock *superBlock) {
+   return countfileExtents(diskToCheck, superBlock->rootInode);;
+}
+
+int  countfileExtents(int diskToCheck, INode *currentInode) {
+  int numberOfFileExtents = 0;
+  if(!currentInode) {
+      return 0;
+   }
+   if(currentInode->iNodeList == NULL && currentInode->data > 0) {
+      FileExtent *fileExtent;
+      readBlock(diskToCheck, currentInode->data, fileExtent);
+      numberOfFileExtents++;
+      
+      while(fileExtent->nextFileExtent) {
+      if(checkBlockType(fileExtent->required.type, FILE_EXTENT_TYPE)< 0) {
+         return -1;
+      }
+         numberOfFileExtents++;
+         fileExtent = fileExtent->nextFileExtent;
+      }
+   }
+  else {
+      INode *current = currentInode->iNodeList;
+      while(current) {
+         int flag = countfileExtents(diskToCheck, current);
+         if(flag == DISK_ERROR) {
+            return DISK_ERROR;
+         }
+         
+         numberOfFileExtents += flag;
+         current = current->iNodeList;
+      }
+   }
+   
+   return numberOfFileExtents;
+}
+
+int checkAllInodes(INode *currentInode) {
+   if(!currentInode) {
+      return 0;
+   }
+   if(checkBlockType(currentInode->required.type, INODE_TYPE) < 0) {
+      return DISK_ERROR;
+   }
+   int found  = 0;
+   INode *current = currentInode->iNodeList;
+   while(current) {
+      int flag = checkAllInodes(current);
+      if(flag == DISK_ERROR) {
+         return DISK_ERROR;
+      }
+      current = current->iNodeList;
+      found += flag;
+   }
+   
+   return found++;
+}
+
 //MIGHT WANT TO CLEAR EVERYTHING
 int tfs_unmount(void) {
 
