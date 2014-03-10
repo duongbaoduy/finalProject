@@ -1,13 +1,12 @@
 #include<stdio.h>
 #include<stdlib.h>
-#include "libDisk.h"
 #include "tinyFS.h"
 #define TEST_PHASE_ONE 0
-#define TEST_MAKE_MOUNT_UNMOUNT 0
-#define TEST_OPEN_CLOSE_FILE 0
-#define TEST_WRITE_FILE 0
-#define TEST_DELETE_FILE 0
-#define TEST_READ_SEEK_BYTE 0
+#define TEST_MAKE_MOUNT_UNMOUNT 1
+#define TEST_OPEN_CLOSE_FILE 1
+#define TEST_WRITE_FILE 1
+#define TEST_DELETE_FILE 1
+#define TEST_READ_SEEK_BYTE 1
 
 int disk;
 char a[256] = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
@@ -60,17 +59,17 @@ int testReadSeek() {
       tfs_readByte(fd3, buffer);
       printf("BUFFER SHOULD BE K: %c\n", buffer[1]);
 
-      printf("SEEKINGBYTE FROM FD3");      
+      printf("SEEKINGBYTE FROM FD3\n");      
       tfs_seek(fd3, 13);
      
-     printf("READING BYTE FROM FD3");
+     printf("READING BYTE FROM FD3\n");
      tfs_readByte(fd3, buffer);
      printf("BUFFER SHOULD BE D: %c\n", buffer[1]);
      
-      printf("SEEKINGBYTE FROM FD3");      
+      printf("SEEKINGBYTE FROM FD3\n");      
       tfs_seek(fd3, 256);
      
-     printf("READING BYTE FROM FD3");
+     printf("READING BYTE FROM FD3\n");
      tfs_readByte(fd3, buffer);
      printf("BUFFER SHOULD BE i: %c\n", buffer[1]);
 
