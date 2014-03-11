@@ -1,6 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include "tinyFS.h"
+#include "TinyFS_errno.h"
 #define TEST_PHASE_ONE 0
 #define TEST_MAKE_MOUNT_UNMOUNT 1
 #define TEST_OPEN_CLOSE_FILE 1
@@ -17,6 +18,26 @@ fileDescriptor fd1;
 fileDescriptor fd2;
 fileDescriptor fd3;
 
+int error = 0;
+
+void testForErrors(int error) {
+   if(error == CORRUPTED_DATA_FLAG) {
+      printf("CORRUPTED_DATA_FLAG\n");
+   }
+   else if (error == OUT_OF_BOUNDS_FLAG) {
+      printf("OUT_OF_BOUNDS_FLAG\n");
+   }
+   else if (error == FILE_NOT_FOUND) {
+      printf("FILE_NOT_FOUND\n");
+   }
+   else if (error == DISK_ERROR) {
+      printf("DISK_ERROR\n");
+   }
+   else if (error == READ_WRITE_ERROR) {
+      printf("READ_WRITE_ERROR\n");
+   }
+}
+
 int main() {
 
    disk = openDisk("defaultDisk", 10240);
@@ -27,81 +48,105 @@ int main() {
 }
 int testPhaseTwo() {
    if(TEST_MAKE_MOUNT_UNMOUNT) {
-      testMakeMountUnmount();
+      error = testMakeMountUnmount();
+      testForErrors(error);
    }
    if(TEST_OPEN_CLOSE_FILE) {
       testOpenCloseFile();
+      testForErrors(error);
    }
    if(TEST_WRITE_FILE) {
-      testWriteFile();
+      error = testWriteFile();
+      testForErrors(error);
    }
    if(TEST_READ_SEEK_BYTE) {
-      testReadSeek();
+      error = testReadSeek();
+      testForErrors(error);
    }
    
    if(TEST_DELETE_FILE) {
-      testDeleteFile();
+      error = testDeleteFile();
+      testForErrors(error);
    }
 
 }
 
 int testReadSeek() {
-      char buffer[1];
-      printf("READING BYTE FROM FD1");
-      tfs_readByte(fd1, buffer);
-      printf("BUFFER SHOULD BE A: %c\n", buffer[1]);
-      
-      printf("READING BYTE FROM FD2");
-      tfs_readByte(fd2, buffer);
-      printf("BUFFER SHOULD BE B: %c\n", buffer[1]);
-       
-      printf("READING BYTE FROM FD3");
-      tfs_readByte(fd3, buffer);
-      printf("BUFFER SHOULD BE K: %c\n", buffer[1]);
+   char buffer[1];
+   printf("READING BYTE FROM FD1");
+   error = tfs_readByte(fd1, buffer);
+   testForErrors(error);
+   printf("BUFFER SHOULD BE A: %c\n", buffer[1]);
+   
+   printf("READING BYTE FROM FD2");
+   error = tfs_readByte(fd2, buffer);
+   testForErrors(error);
+   printf("BUFFER SHOULD BE B: %c\n", buffer[1]);
+    
+   printf("READING BYTE FROM FD3");
+   error = tfs_readByte(fd3, buffer);
+   testForErrors(error);
+   printf("BUFFER SHOULD BE K: %c\n", buffer[1]);
 
-      printf("SEEKINGBYTE FROM FD3\n");      
-      tfs_seek(fd3, 13);
-     
-     printf("READING BYTE FROM FD3\n");
-     tfs_readByte(fd3, buffer);
-     printf("BUFFER SHOULD BE D: %c\n", buffer[1]);
-     
-      printf("SEEKINGBYTE FROM FD3\n");      
-      tfs_seek(fd3, 256);
-     
-     printf("READING BYTE FROM FD3\n");
-     tfs_readByte(fd3, buffer);
-     printf("BUFFER SHOULD BE i: %c\n", buffer[1]);
+   printf("SEEKINGBYTE FROM FD3\n");      
+   error = tfs_seek(fd3, 13);
+   testForErrors(error);
+ 
+   printf("READING BYTE FROM FD3\n");
+   error = tfs_readByte(fd3, buffer);
+   testForErrors(error);
+   printf("BUFFER SHOULD BE D: %c\n", buffer[1]);
+  
+   printf("SEEKINGBYTE FROM FD3\n");      
+   error = tfs_seek(fd3, 256);
+   testForErrors(error);
+   
+   printf("READING BYTE FROM FD3\n");
+   error = tfs_readByte(fd3, buffer);
+   testForErrors(error);
+   printf("BUFFER SHOULD BE i: %c\n", buffer[1]);
 
 } 
 
 int testDeleteFile() {
    printf("Deleting File1\n");
-   tfs_deleteFile(fd1);
+   error = tfs_deleteFile(fd1);
+   testForErrors(error);   
+   
    printf("Deleting File2\n");
-   tfs_deleteFile(fd2);
-      
+   error = tfs_deleteFile(fd2);
+   testForErrors(error);        
+   
    printf("DELETING A FILE NOT IN SYSTEM\n");
-   tfs_deleteFile(2566);
+   error = tfs_deleteFile(2566);
+   testForErrors(error);  
 }
 
 int testWriteFile() {
    printf("Opening File1\n");
    fd1 = tfs_openFile("file1");
+   testForErrors(fd1);     
       
    printf("Opening File2\n");
    fd2 = tfs_openFile("file2");
+   testForErrors(fd2);
    
    printf("Opening File3\n");
    fd3 = tfs_openFile("file3");
+   testForErrors(fd3);  
 
-   tfs_writeFile(fd1, a, 256);
-   tfs_writeFile(fd2, b, 256);
-   tfs_writeFile(fd3, c, 513);
+   error = tfs_writeFile(fd1, a, 256);
+   testForErrors(error);  
+   
+   error = tfs_writeFile(fd2, b, 256);
+   testForErrors(error);  
+   
+   error = tfs_writeFile(fd3, c, 513);
+   testForErrors(error);  
       
    printf("WRITING TO A FILE NOT IN SYSTEM\n");
-   tfs_writeFile(2542, b, 256);
-   
+   error = tfs_writeFile(2542, b, 256);
+   testForErrors(error);  
    if(TEST_DELETE_FILE) {
       testDeleteFile(fd1, fd2);
    }
@@ -110,38 +155,56 @@ int testWriteFile() {
 int testOpenCloseFile() {
       printf("Opening File1\n");
       fd1 = tfs_openFile("file1");
+      testForErrors(fd1);  
       
       printf("Opening File2\n");
       fd2 = tfs_openFile("file2");
+      testForErrors(fd2);  
       
       printf("Closing File1\n");
       tfs_closeFile(fd1);
+      testForErrors(fd1);  
       
       printf("Opening File3\n");
       fd3 = tfs_openFile("file3");
+      testForErrors(fd3);  
       
       printf("Closing File3\n");
-      tfs_closeFile(fd3);
+      error = tfs_closeFile(fd3);
+      testForErrors(error);  
       
       printf("Closing File2\n");
-      tfs_closeFile(fd2);
-      
+      error = tfs_closeFile(fd2);
+      testForErrors(error);  
       printf("Closing File4 NOT A FILE IN OUR SYSTEM\n");
-      tfs_closeFile(123554);
+      error = tfs_closeFile(123554);
+      testForErrors(error);  
 }
 
 int testMakeMountUnmount() {
    printf("Making Disk\n");
-   tfs_mkfs("defaultDisk", 10240);
+   error = tfs_mkfs("defaultDisk", 10240);
+   testForErrors(error);  
+   
    printf("Mounting Disk\n");
-   tfs_mount("defaultDisk");
+   error = tfs_mount("defaultDisk");
+   testForErrors(error);  
+   
    printf("UnMounting Disk\n");
-   tfs_unmount();
+   error = tfs_unmount();
+   testForErrors(error);  
+   
    printf("Mounting Disk\n");
-   tfs_mount("defaultDisk");
+   error = tfs_mount("defaultDisk");
+   testForErrors(error);  
+   
    printf("Mounting Second Disk While First One Is Mounted\n");
-   tfs_mount("secondFileDisk");
-   tfs_unmount();
+   error = tfs_mount("secondFileDisk");
+   testForErrors(error);  
+   
+   printf("UnMounting Disk\n");
+   error = tfs_unmount();
+   testForErrors(error);  
 }
 
 int testPhaseOne() {
@@ -157,5 +220,6 @@ int testPhaseOne() {
       
       writeBlock(disk, 5, a);
    }
-
 }
+
+
