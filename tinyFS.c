@@ -28,6 +28,8 @@
 #define FILE_EXTENT_TYPE 3
 #define FREE_TYPE 4
 
+#define FE_SIZE (sizeof(RequiredInfo) + sizeof(unsigned short) + sizeof(FileExtent *))
+
 SuperBlock *superBlock;
 INode *rootINode;
 fileDescriptor disk;
@@ -105,7 +107,7 @@ INode *makeInode(unsigned char blockNum, char *filename, unsigned char data) {
    requiredInfo.blockNumber = blockNum;
    
    iNode->required = requiredInfo;
-   memcpy((iNode->fileName), filename, 8);
+   memcpy((iNode->fileName), filename, 9);
    iNode->size = 0;
    iNode->data = data;
    iNode->next = NULL;
@@ -133,7 +135,7 @@ FileExtent *makeFileExtent(unsigned char blockNum) {
    RequiredInfo requiredInfo;
    FileExtent *fileExtent = calloc(sizeof(FileExtent), 1);
    
-   requiredInfo.type = 2; // NOT SURE
+   requiredInfo.type = 3; // NOT SURE
    requiredInfo.magicNumber = 0x45; // NOT SURE
    requiredInfo.blockNumber = blockNum;
    
@@ -205,8 +207,9 @@ int tfs_mkfs(char *filename, int nBytes) {
             temp = temp->next;
          }
          temp->next = fb;
-         numFreeBlocks++;
       }
+      
+      numFreeBlocks++;
    }
    
    superBlock->freeBlocks = freeBlocks;
@@ -271,14 +274,14 @@ int checkForDiskError(int diskToCheck, SuperBlock *superBlockToCheck) {
    //CHECK NUMBER OF FREE BLOCKS AND TYPE
    while(freeBlock) {
       FileExtent *fileExtent;
-      if(checkBlockType(freeBlock->required.type, FILE_EXTENT_TYPE) < 0) {
+      if(checkBlockType(freeBlock->required.type, FREE_TYPE) < 0) {
          return DISK_ERROR;
       }
       freeBlock = freeBlock->next;
       numberOfFreeBlocks++;
    }
    
-   if(superBlock->numberOfFreeBlocks != numberOfFreeBlocks) {
+   if(superBlockToCheck->numberOfFreeBlocks != numberOfFreeBlocks) {
       return DISK_ERROR;
    }
    
@@ -297,12 +300,12 @@ int checkForDiskError(int diskToCheck, SuperBlock *superBlockToCheck) {
    }
    
    //CHECKING ALL THE INODES FOR CORRECT TYPE AND COUNTING THEM
-   int numberOfInodes = checkAllInodes(superBlock->rootInode);
+   int numberOfInodes = checkAllInodes(superBlockToCheck->rootInode);
    if(numberOfInodes < 0) {
       return DISK_ERROR;
    }
    //CHECKING ALL FILE EXTENTS FOR CORRECT TYPE AND COUNTING THEM
-   int numberOfFileExtents = checkAllFileExtents(diskToCheck, superBlock);
+   int numberOfFileExtents = checkAllFileExtents(diskToCheck, superBlockToCheck);
    if(numberOfFileExtents < 0) {
       return DISK_ERROR;
    }
@@ -369,7 +372,7 @@ int checkAllInodes(INode *currentInode) {
       found += flag;
    }
    
-   return found++;
+   return ++found;
 }
 
 //MIGHT WANT TO CLEAR EVERYTHING
@@ -392,7 +395,7 @@ INode *findInodeRelatingToFileName(char *fileName, INode *currentInode) {
    if(!currentInode) {
       return NULL;
    }
-   
+   //printf("FILENAME: %s\n INODE_NAME: %s\n", fileName, currentInode->fileName);
    if(!strcmp(fileName, currentInode->fileName)) { // if the file names are the same
       return currentInode;
    }
@@ -443,7 +446,7 @@ void freeFileExtents(INode *iNode) { //verify with stephen
       int tempBlockNum = fileExtent->required.blockNumber; // need this because I clean the block
 	  FileExtent *temp = fileExtent; // does it make sense to do this for writeBlock?
 	  fileExtent = fileExtent->next;
-	  FreeBlock *freeBlock = makeFreeBlock(fileExtent->required.blockNumber);
+	  FreeBlock *freeBlock = makeFreeBlock(temp->required.blockNumber);
 	  
 	  
       // is cleanBlock even necessary in this? does this even matter because writeBlock is all that affects the disk? do i have to wipe the fileExtent?
@@ -452,7 +455,7 @@ void freeFileExtents(INode *iNode) { //verify with stephen
       superBlock->freeBlocks = freeBlock;
       superBlock->numberOfFreeBlocks++;
 	  
-	  writeBlock(disk, tempBlockNum, temp); // VERIFY WITH STEVEN IF THIS MAKES SENSE AS A 3RD PARAMETER
+	 // writeBlock(disk, tempBlockNum, temp); // VERIFY WITH STEVEN IF THIS MAKES SENSE AS A 3RD PARAMETER
 	  
 	  writeBlock(disk, 0, superBlock);
    }
@@ -475,7 +478,7 @@ fileDescriptor tfs_openFile(char *name) {
        return CORRUPTED_DATA_FLAG;
     }
    
-    if(iNode->filePointer >= iNode->size) {
+    if(iNode-> size > 0 && iNode->filePointer >= iNode->size) {
        return OUT_OF_BOUNDS_FLAG;
     }
 	
@@ -506,10 +509,6 @@ int tfs_closeFile(fileDescriptor FD) {
    
    if(checkMagicNumber(iNode->required.magicNumber) < 0) {
       return CORRUPTED_DATA_FLAG;
-   }
-   
-   if(iNode->filePointer >= iNode->size) {
-      return OUT_OF_BOUNDS_FLAG;
    }
    
    time_t ctime = time(NULL);
@@ -558,22 +557,23 @@ int tfs_writeFile(fileDescriptor FD,char *buffer, int size) { // does writing wr
       return CORRUPTED_DATA_FLAG;
    }
    
-   if(iNode->filePointer >= iNode->size) {
+   if(iNode->size > 0 && iNode->filePointer > iNode->size) {
       return OUT_OF_BOUNDS_FLAG;
    }
    
    if (openFiles[iNode->fileDescriptor] == 0) {
       return FILE_IS_CLOSED;
    }
-   
+/*   
    if (iNode->writeFlag == 0) {
       //throw error because file can only be read from
 	  return READ_WRITE_ERROR; 
    }
-   
+*/   
    time_t ctime = time(NULL);
    iNode->modification = ctime;
    iNode->access = ctime;
+   iNode->size = size;
    
    freeFileExtents(iNode); // helper method to clear file before writing
    
@@ -629,9 +629,6 @@ int tfs_deleteFile(fileDescriptor FD) {
        return CORRUPTED_DATA_FLAG;
     }
    
-    if(iNode->filePointer >= iNode->size) {
-       return OUT_OF_BOUNDS_FLAG;
-    }
 	
 	freeFileExtents(iNode);
 	
@@ -677,14 +674,14 @@ int tfs_readByte(fileDescriptor FD, char *buffer) {
       return CORRUPTED_DATA_FLAG;
    }
    
-   if(iNode->filePointer >= iNode->size) {
+   if(iNode->size > 0 && iNode->filePointer >= iNode->size) {
       return OUT_OF_BOUNDS_FLAG;
    }
 
    int blockNum = iNode->filePointer / (BLOCKSIZE - 6);
    
    if(iNode->filePointer % (BLOCKSIZE - 6) == 0) {
-      printf("TRUTH: %d\n", sizeof(RequiredInfo) + sizeof(unsigned short) + sizeof(FileExtent *) == 6);
+      printf("TRUTH: %lu\n", FE_SIZE);
       blockNum++;
    }
    
@@ -717,7 +714,7 @@ int tfs_seek(fileDescriptor FD, int offset) {
       return CORRUPTED_DATA_FLAG;
    }
    
-   if(iNode->filePointer >= iNode->size) {
+   if(iNode->size > 0 && iNode->filePointer >= iNode->size) {
       return OUT_OF_BOUNDS_FLAG;
    }
    
@@ -758,7 +755,7 @@ int tfs_rename(char *fileName, char* newName) {
       return FILE_NOT_FOUND;
    }
    
-   memcpy(iNode->fileName, newName, 8);
+   memcpy(iNode->fileName, newName, 9);
    
    time_t ctime = time(NULL);
    iNode->modification = ctime;
@@ -836,14 +833,14 @@ int tfs_writeByte(fileDescriptor FD, unsigned int data) {
       return CORRUPTED_DATA_FLAG;
    }
    
-   if(iNode->filePointer >= iNode->size) {
+   if(iNode->size > 0 && iNode->filePointer >= iNode->size) {
       return OUT_OF_BOUNDS_FLAG;
    }
 
    int blockNum = iNode->filePointer / (BLOCKSIZE - 6);
    
    if(iNode->filePointer % (BLOCKSIZE - 6) == 0) {
-      printf("TRUTH: %d\n", sizeof(RequiredInfo) + sizeof(unsigned short) + sizeof(FileExtent *) == 6);
+      printf("TRUTH: %lu %d, %d\n", FE_SIZE, 0, 0);
       blockNum++;
    }
    
