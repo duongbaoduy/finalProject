@@ -10,19 +10,6 @@ typedef struct RequiredInfo {
    unsigned char blockNumber;    
 } RequiredInfo;
 
-typedef struct INode {
-   RequiredInfo required;
-   char fileName[9];
-   unsigned short size;
-   unsigned char data;
-   struct INode *iNodeList;
-   short fileDescriptor; // needed because we could  have two of the same files.
-   unsigned short filePointer; 
-   time_t creation;
-   time_t access;
-   time_t modification;
-} INode;
-
 typedef struct FreeBlock {
    RequiredInfo required;
    struct FreeBlock *next;
@@ -38,9 +25,24 @@ typedef struct SuperBlock {
 typedef struct FileExtent {
    RequiredInfo required;
    unsigned short iNodeBlockNumber;
-   struct FileExtent *nextFileExtent;
+   struct FileExtent *next;
    char data[BLOCKSIZE - 6];
 } FileExtent;
+
+typedef struct INode {
+   RequiredInfo required;
+   char fileName[9];
+   unsigned short size;
+   unsigned char data;
+   struct INode *next;
+   short fileDescriptor; // needed because we could  have two of the same files.
+   unsigned short filePointer; 
+   FileExtent *fileExtent;
+   unsigned char writeFlag;
+   time_t creation;
+   time_t access;
+   time_t modification;
+} INode;
 
 /* Your program should use a 10240 Byte disk size giving you 40 blocks total. 
 This is a default size. You must be able to support different possible values */
