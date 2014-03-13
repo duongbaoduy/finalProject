@@ -678,7 +678,7 @@ int tfs_readByte(fileDescriptor FD, char *buffer) {
       return OUT_OF_BOUNDS_FLAG;
    }
 
-   int blockNum = iNode->filePointer / (BLOCKSIZE - 6);
+   int blockNum = iNode->filePointer / (BLOCKSIZE - FE_SIZE);
    
    if(iNode->filePointer % (BLOCKSIZE - FE_SIZE) == 0) {
       printf("TRUTH: %lu\n", FE_SIZE);
