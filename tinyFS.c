@@ -67,13 +67,13 @@ INode *findInodeRelatingToFile(int fd, INode *currentInode) {
       return currentInode;
    }
    
-   INode *current = currentInode->iNodeList;
+   INode *current = currentInode->next;
    while(current) {
       INode *found = findInodeRelatingToFile(fd, current);
       if(found) {
          return found;
       }
-      current = current->iNodeList;
+      current = current->next;
    }
    
    return NULL;
@@ -90,8 +90,8 @@ int findCorrectFileExtent(FileExtent *fileExtent, int blockNum, int numBlocksToR
       memcpy(fileExtent, buffer, BLOCKSIZE);
       
       numBlocksToReadThrough--;
-      if(fileExtent->nextFileExtent) {
-         blockNum = fileExtent->nextFileExtent->required.blockNumber;
+      if(fileExtent->next) {
+         blockNum = fileExtent->next->required.blockNumber;
       }
    }
 }
@@ -108,7 +108,7 @@ INode *makeInode(unsigned char blockNum, char *filename, unsigned char data) {
    memcpy((iNode->fileName), filename, 8);
    iNode->size = 0;
    iNode->data = data;
-   iNode->iNodeList = NULL;
+   iNode->next = NULL;
    iNode->fileDescriptor = -1;
    iNode->filePointer = 0;
    
@@ -322,21 +322,21 @@ int  countfileExtents(int diskToCheck, INode *currentInode) {
   if(!currentInode) {
       return 0;
    }
-   if(currentInode->iNodeList == NULL && currentInode->data > 0) {
+   if(currentInode->next == NULL && currentInode->data > 0) {
       FileExtent *fileExtent;
       readBlock(diskToCheck, currentInode->data, fileExtent);
       numberOfFileExtents++;
       
-      while(fileExtent->nextFileExtent) {
+      while(fileExtent->next) {
       if(checkBlockType(fileExtent->required.type, FILE_EXTENT_TYPE)< 0) {
          return -1;
       }
          numberOfFileExtents++;
-         fileExtent = fileExtent->nextFileExtent;
+         fileExtent = fileExtent->next;
       }
    }
   else {
-      INode *current = currentInode->iNodeList;
+      INode *current = currentInode->next;
       while(current) {
          int flag = countfileExtents(diskToCheck, current);
          if(flag == DISK_ERROR) {
@@ -344,7 +344,7 @@ int  countfileExtents(int diskToCheck, INode *currentInode) {
          }
          
          numberOfFileExtents += flag;
-         current = current->iNodeList;
+         current = current->next;
       }
    }
    
@@ -359,13 +359,13 @@ int checkAllInodes(INode *currentInode) {
       return DISK_ERROR;
    }
    int found  = 0;
-   INode *current = currentInode->iNodeList;
+   INode *current = currentInode->next;
    while(current) {
       int flag = checkAllInodes(current);
       if(flag == DISK_ERROR) {
          return DISK_ERROR;
       }
-      current = current->iNodeList;
+      current = current->next;
       found += flag;
    }
    
@@ -397,13 +397,13 @@ INode *findInodeRelatingToFileName(char *fileName, INode *currentInode) {
       return currentInode;
    }
    
-   INode *current = currentInode->iNodeList;
+   INode *current = currentInode->next;
    while(current) {
       INode *found = findInodeRelatingToFileName(fileName, current);
       if(found) {
          return found;
       }
-      current = current->iNodeList;
+      current = current->next;
    }
    
    return NULL;
@@ -416,10 +416,10 @@ INode *findInodeRelatingToFileName(char *fileName, INode *currentInode) {
 INode *createFile(char *fileName) {
    
    FreeBlock *freeBlock = superBlock->freeBlocks;
-   superBlock->freeBlock = freeBlock->next; // remove head from freeBlocks list
+   superBlock->freeBlocks = freeBlock->next; // remove head from freeBlocks list
    superBlock->numberOfFreeBlocks--;
    
-   INode *newInode = makeInode(freeBlock->required.blockNumber, fileName, null); // what is data? change from null to something else
+   INode *newInode = makeInode(freeBlock->required.blockNumber, fileName, 0); // what is data? change from null to something else
    
    // make from freeblock, add to head of Inode list in superBlock
    newInode->next = superBlock->rootInode;
@@ -429,11 +429,33 @@ INode *createFile(char *fileName) {
    
    if(writeBlock(disk, 0, superBlock) == -1) {
       printf("WRITE ERROR\n");
-      return READ_WRITE_ERROR;
+      return NULL;
    }
    
-   return INode;
+   return newInode;
 
+}
+
+void freeFileExtents(INode *iNode) { //verify with stephen
+   FileExtent *fileExtent = iNode->fileExtent;
+   
+   while (fileExtent != NULL) {
+      int tempBlockNum = fileExtent->required.blockNumber; // need this because I clean the block
+	  FileExtent *temp = fileExtent; // does it make sense to do this for writeBlock?
+	  fileExtent = fileExtent->next;
+	  FreeBlock *freeBlock = makeFreeBlock(fileExtent->required.blockNumber);
+	  
+	  
+      // is cleanBlock even necessary in this? does this even matter because writeBlock is all that affects the disk? do i have to wipe the fileExtent?
+	  cleanBlock(tempBlockNum); // IS THIS OKAY? SHOULD I LEAVE REQUIRED INFO OR DOES THIS WIPE IT ALL OUT? WHY DOES IT WRITE? WE RESPONSIBLE FOR MEMORY?
+      freeBlock->next = superBlock->freeBlocks; // adds freeBlock back into linked list
+      superBlock->freeBlocks = freeBlock;
+      superBlock->numberOfFreeBlocks++;
+	  
+	  writeBlock(disk, tempBlockNum, temp); // VERIFY WITH STEVEN IF THIS MAKES SENSE AS A 3RD PARAMETER
+	  
+	  writeBlock(disk, 0, superBlock);
+   }
 }
 
 /* Opens a file for reading and writing on the currently mounted file system.
@@ -449,7 +471,7 @@ fileDescriptor tfs_openFile(char *name) {
 	   iNode = createFile(name); // MAKE A NEW FILE 
     }
    
-    if(checkMagicNumber(iNode->required.magicNumber) < 0) {
+    if(iNode == NULL || checkMagicNumber(iNode->required.magicNumber) < 0) {
        return CORRUPTED_DATA_FLAG;
     }
    
@@ -464,7 +486,7 @@ fileDescriptor tfs_openFile(char *name) {
     iNode->modification = ctime;
     iNode->access = ctime;
 	
-	filesOpen[fileDescriptor] = 1;
+	openFiles[iNode->fileDescriptor] = 1;
 	
 	writeBlock(disk, iNode->required.blockNumber, iNode);
 	return iNode->fileDescriptor; // why not success?
@@ -493,7 +515,7 @@ int tfs_closeFile(fileDescriptor FD) {
    time_t ctime = time(NULL);
    iNode->access = ctime;
 
-   openFiles[iNode.fileDescriptor] = 0;
+   openFiles[iNode->fileDescriptor] = 0;
    
    writeBlock(disk, iNode->required.blockNumber, iNode);
    
@@ -514,7 +536,7 @@ int tfs_writeFile(fileDescriptor FD,char *buffer, int size) { // does writing wr
       return FILE_NOT_FOUND;
    }
    
-   if (iNode->fileExtent == NULL && superblock->numberOfFreeBlocks < ((double)size) / BLOCKSIZE) {
+   if (iNode->fileExtent == NULL && superBlock->numberOfFreeBlocks < ((double)size) / BLOCKSIZE) {
       printf("NOT ENOUGH SPACE IN DISK\n");
 	  return DISK_OUT_OF_SPACE;
    }
@@ -523,10 +545,10 @@ int tfs_writeFile(fileDescriptor FD,char *buffer, int size) { // does writing wr
        int numOfFileExtents = 1;
 	   FileExtent *fileEx = iNode->fileExtent;
 	   while (fileEx != NULL) {
-	      fileEx = fileExtent->next;
+	      fileEx = fileEx->next;
 		  numOfFileExtents++;
 	   }
-	   if (superblock->numberOfFreeBlocks < ((double)size) / BLOCKSIZE - numOfFileExtents) {
+	   if (superBlock->numberOfFreeBlocks < ((double)size) / BLOCKSIZE - numOfFileExtents) {
 	      printf("NOT ENOUGH SPACE IN DISK\n");
 	      return DISK_OUT_OF_SPACE;
 	   }
@@ -540,12 +562,13 @@ int tfs_writeFile(fileDescriptor FD,char *buffer, int size) { // does writing wr
       return OUT_OF_BOUNDS_FLAG;
    }
    
-   if (iNode->status = 0) {
-      //throw error because file is closed
+   if (openFiles[iNode->fileDescriptor] == 0) {
+      return FILE_IS_CLOSED;
    }
    
-   if (iNode->readWriteFlags = cannotWriteToFile) {
+   if (iNode->writeFlag == 0) {
       //throw error because file can only be read from
+	  return READ_WRITE_ERROR; 
    }
    
    time_t ctime = time(NULL);
@@ -555,7 +578,7 @@ int tfs_writeFile(fileDescriptor FD,char *buffer, int size) { // does writing wr
    freeFileExtents(iNode); // helper method to clear file before writing
    
    FreeBlock *freeBlock = superBlock->freeBlocks; // create link from INode to fileExtent
-   superBlock->freeBlock = freeBlock->next;
+   superBlock->freeBlocks = freeBlock->next;
    superBlock->numberOfFreeBlocks--;
    iNode->fileExtent = makeFileExtent(freeBlock->required.blockNumber);
    FileExtent *fileExtent = iNode->fileExtent;
@@ -566,7 +589,7 @@ int tfs_writeFile(fileDescriptor FD,char *buffer, int size) { // does writing wr
    while (sizeLeft > BLOCKSIZE - 6) {
       FileExtent *tempFileExtent = fileExtent;
 	  FreeBlock *freeBlock = superBlock->freeBlocks;
-      superBlock->freeBlock = freeBlock->next;
+      superBlock->freeBlocks = freeBlock->next;
       superBlock->numberOfFreeBlocks--;
 
 	  memcpy(fileExtent->data, bufferSpot, BLOCKSIZE - 6);
@@ -631,33 +654,11 @@ int tfs_deleteFile(fileDescriptor FD) {
 	
 	int tempBlockNum = iNode->required.blockNumber; // maybe not necessary
 	
-	writeBlock(disk, tempBlockNum, whatDoIWantHere); // WHAT DO I WANT HERE? DO I WRITE AN EMPTY BLOCK? JUST REQUIRED INFO? WHAT?
+	writeBlock(disk, tempBlockNum, freeBlock); // WHAT DO I WANT HERE? DO I WRITE AN EMPTY BLOCK? JUST REQUIRED INFO? WHAT?
 	
 	writeBlock(disk, 0, superBlock);
 	
 	return 1; //SUCCESS CODE
-}
-
-void freeFileExtents(INode *iNode) { //verify with stephen
-   FileExent *fileExtent = iNode->fileExtent;
-   
-   while (fileExtent != NULL) {
-      int tempBlockNum = fileExtent->required.blockNumber; // need this because I clean the block
-	  FileExtent *temp = fileExtent; // does it make sense to do this for writeBlock?
-	  fileExtent = fileExtent->next;
-	  FreeBlock *freeBlock = makeFreeBlock(fileExtent->required.blockNumber);
-	  
-	  
-      // is cleanBlock even necessary in this? does this even matter because writeBlock is all that affects the disk? do i have to wipe the fileExtent?
-	  cleanBlock(tempBlockNum); // IS THIS OKAY? SHOULD I LEAVE REQUIRED INFO OR DOES THIS WIPE IT ALL OUT? WHY DOES IT WRITE? WE RESPONSIBLE FOR MEMORY?
-      freeBlock->next = superBlock->freeBlocks; // adds freeBlock back into linked list
-      superBlock->freeBlocks = freeBlock;
-      superBlock->numberOfFreeBlocks++;
-	  
-	  writeBlock(disk, tempBlockNum, temp); // VERIFY WITH STEVEN IF THIS MAKES SENSE AS A 3RD PARAMETER
-	  
-	  writeBlock(disk, 0, superBlock);
-   }
 }
 
 /* reads one byte from the file and copies it to buffer, using the current file
@@ -775,10 +776,10 @@ void printFileAndDirectories(INode *currentInode) {
    
    printf("%s\n", currentInode->fileName);
    
-   INode *current = currentInode->iNodeList;
+   INode *current = currentInode->next;
    while(current) {
       printFileAndDirectories(current);
-      current = current->iNodeList;
+      current = current->next;
    }
    
    return;
@@ -788,7 +789,7 @@ void printFileAndDirectories(INode *currentInode) {
 int tfs_readdir() {
    
    if(superBlock->rootInode) {
-      printFileAndDirectories(superBlock->rootInode->iNodeList);
+      printFileAndDirectories(superBlock->rootInode->next);
    }
 
    return 1;
