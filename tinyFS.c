@@ -107,7 +107,7 @@ INode *makeInode(unsigned char blockNum, char *filename, unsigned char data) {
    requiredInfo.blockNumber = blockNum;
    
    iNode->required = requiredInfo;
-   memcpy((iNode->fileName), filename, 9);
+   memcpy((iNode->fileName), filename, 8);
    iNode->size = 0;
    iNode->data = data;
    iNode->next = NULL;
@@ -755,7 +755,7 @@ int tfs_rename(char *fileName, char* newName) {
       return FILE_NOT_FOUND;
    }
    
-   memcpy(iNode->fileName, newName, 9);
+   memcpy(iNode->fileName, newName, 8);
    
    time_t ctime = time(NULL);
    iNode->modification = ctime;
