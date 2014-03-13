@@ -5,5 +5,7 @@
 #define FILE_NOT_FOUND -3
 #define DISK_ERROR -4
 #define READ_WRITE_ERROR -5
+#define DISK_OUT_OF_SPACE -6
+#define FILE_IS_CLOSED -7
 
 #endif
