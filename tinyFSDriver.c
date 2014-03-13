@@ -6,7 +6,7 @@
 #define TEST_MAKE_MOUNT_UNMOUNT 1
 #define TEST_OPEN_CLOSE_FILE 1
 #define TEST_WRITE_FILE 1
-#define TEST_DELETE_FILE 1
+#define TEST_DELETE_FILE 0
 #define TEST_READ_SEEK_BYTE 1
 
 int disk;
@@ -160,15 +160,15 @@ int testOpenCloseFile() {
       printf("Opening File2\n");
       fd2 = tfs_openFile("file2");
       testForErrors(fd2);  
-      
+/*      
       printf("Closing File1\n");
       tfs_closeFile(fd1);
       testForErrors(fd1);  
-      
+*/      
       printf("Opening File3\n");
       fd3 = tfs_openFile("file3");
       testForErrors(fd3);  
-      
+/*      
       printf("Closing File3\n");
       error = tfs_closeFile(fd3);
       testForErrors(error);  
@@ -179,13 +179,14 @@ int testOpenCloseFile() {
       printf("Closing File4 NOT A FILE IN OUR SYSTEM\n");
       error = tfs_closeFile(123554);
       testForErrors(error);  
+*/
 }
 
 int testMakeMountUnmount() {
    printf("Making Disk\n");
    error = tfs_mkfs("defaultDisk", 10240);
    testForErrors(error);  
-   
+  /* 
    printf("Mounting Disk\n");
    error = tfs_mount("defaultDisk");
    testForErrors(error);  
@@ -204,7 +205,12 @@ int testMakeMountUnmount() {
    
    printf("UnMounting Disk\n");
    error = tfs_unmount();
+   testForErrors(error); 
+   
+   printf("Mounting Disk\n");
+   error = tfs_mount("defaultDisk");
    testForErrors(error);  
+   */
 }
 
 int testPhaseOne() {
@@ -221,5 +227,4 @@ int testPhaseOne() {
       writeBlock(disk, 5, a);
    }
 }
-
 
