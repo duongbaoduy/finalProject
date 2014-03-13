@@ -586,20 +586,20 @@ int tfs_writeFile(fileDescriptor FD,char *buffer, int size) { // does writing wr
    int sizeLeft = size;
    char *bufferSpot = buffer;
    
-   while (sizeLeft > BLOCKSIZE - 6) {
+   while (sizeLeft > BLOCKSIZE - FE_SIZE) {
       FileExtent *tempFileExtent = fileExtent;
 	  FreeBlock *freeBlock = superBlock->freeBlocks;
       superBlock->freeBlocks = freeBlock->next;
       superBlock->numberOfFreeBlocks--;
 
-	  memcpy(fileExtent->data, bufferSpot, BLOCKSIZE - 6);
+	  memcpy(fileExtent->data, bufferSpot, BLOCKSIZE - FE_SIZE);
 	  fileExtent->next = makeFileExtent(freeBlock->required.blockNumber); // set new fileExtent in linked list of previous
 	  fileExtent = fileExtent->next; // new fileExtent has empty data because we know we need to continue loop and write to it
 	  
 	  writeBlock(disk, tempFileExtent->required.blockNumber, tempFileExtent); // writes to block
 
-	  bufferSpot += BLOCKSIZE - 6; // VERIFY WITH STEPHEN IF I AM INCREMENTING THE POINTER CORRECTLY
-	  sizeLeft -= BLOCKSIZE - 6;
+	  bufferSpot += BLOCKSIZE - FE_SIZE; // VERIFY WITH STEPHEN IF I AM INCREMENTING THE POINTER CORRECTLY
+	  sizeLeft -= BLOCKSIZE - FE_SIZE;
    }
    
    // write rest of bufferSpot
@@ -680,7 +680,7 @@ int tfs_readByte(fileDescriptor FD, char *buffer) {
 
    int blockNum = iNode->filePointer / (BLOCKSIZE - 6);
    
-   if(iNode->filePointer % (BLOCKSIZE - 6) == 0) {
+   if(iNode->filePointer % (BLOCKSIZE - FE_SIZE) == 0) {
       printf("TRUTH: %lu\n", FE_SIZE);
       blockNum++;
    }
@@ -690,7 +690,7 @@ int tfs_readByte(fileDescriptor FD, char *buffer) {
       return READ_WRITE_ERROR;
    } 
 
-   memcpy(buffer, fileExtent + 6 + (iNode->filePointer % (BLOCKSIZE - 6)) , 1);
+   memcpy(buffer, fileExtent + FE_SIZE + (iNode->filePointer % (BLOCKSIZE - FE_SIZE)) , 1);
    iNode->filePointer++;
    
    time_t ctime = time(NULL);
@@ -837,9 +837,9 @@ int tfs_writeByte(fileDescriptor FD, unsigned int data) {
       return OUT_OF_BOUNDS_FLAG;
    }
 
-   int blockNum = iNode->filePointer / (BLOCKSIZE - 6);
+   int blockNum = iNode->filePointer / (BLOCKSIZE - FE_SIZE);
    
-   if(iNode->filePointer % (BLOCKSIZE - 6) == 0) {
+   if(iNode->filePointer % (BLOCKSIZE - FE_SIZE) == 0) {
       printf("TRUTH: %lu %d, %d\n", FE_SIZE, 0, 0);
       blockNum++;
    }
@@ -849,7 +849,7 @@ int tfs_writeByte(fileDescriptor FD, unsigned int data) {
       return READ_WRITE_ERROR;
    } 
 
-   memset(fileExtent + 6 + (iNode->filePointer % (BLOCKSIZE - 6)), data, 1);
+   memset(fileExtent + FE_SIZE + (iNode->filePointer % (BLOCKSIZE - FE_SIZE)), data, 1);
    writeBlock(disk, fileExtent->required.blockNumber, fileExtent);
    iNode->filePointer++;
    
