@@ -34,8 +34,6 @@ typedef struct INode {
    char fileName[9];
    unsigned short size;
    unsigned char data;
-   struct INode *parent;
-   struct INode *children;
    struct INode *next;
    short fileDescriptor; // needed because we could  have two of the same files.
    unsigned short filePointer; 
