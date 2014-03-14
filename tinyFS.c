@@ -60,12 +60,64 @@ int checkBlockNumber(char blockNumber, char correctNumber) {
    return 1;
 }
 
+char* getChild(char *filename) {
+    int first = 0;
+    char temp[9];
+    memcpy(temp, filename, 8);  
+    temp[8] = '\0';
+   
+    char* parent = NULL;
+    char* child = NULL;
+   
+    char *p;
+    p = strtok (temp, "/");
+   
+    while (p!= NULL) {
+
+      if (first == 0) {
+ 	     parent = p;
+ 	  } else { 
+          child = p;
+	  }
+	
+	  p = strtok (NULL, ",:"); 	  
+		  
+    } 
+	
+	return child;
+}
+
+char* getParent(char *filename) {
+    int first = 0;
+    char temp[9];
+    memcpy(temp, filename, 8);  
+    temp[8] = '\0';
+   
+    char *parent = NULL;
+    char *child = NULL;
+   
+    char *p;
+    p = strtok (temp, "/");
+   
+    while (p!= NULL) {
+
+      if (first == 0) {
+ 	     parent = p;
+ 	  } else { 
+          child = p;
+	  }
+    
+	  p = strtok (NULL, ",:"); 
+	
+	}
+	
+	return parent;
+}
+
 INode *findInodeRelatingToFileName(char *fileName, INode *currentInode) {
 	
-   char *token = strtok(fileName, "/");
-   char *parent = token;
-   token = strtok(NULL, "/");
-   char *child = token;
+   char* child = getChild(fileName);
+   char* parent = getParent(fileName);
    
    if (parent && child != NULL) {
 	   if(!strcmp(child, currentInode->fileName)) { // if the file names are the same
@@ -99,10 +151,8 @@ INode *makeInode(unsigned char blockNum, char *filename, unsigned char data) {
    requiredInfo.magicNumber = 0x45;
    requiredInfo.blockNumber = blockNum;
    
-   char *token = strtok(filename, "/");
-   char *parent = token;
-   token = strtok(NULL, "/");
-   char *child = token;
+   char *parent = getParent(filename);
+   char *child = getChild(filename);  
    
    iNode->required = requiredInfo;
    
@@ -433,10 +483,13 @@ INode *findInodeRelatingToFile(int fd, INode *currentInode) {
  */
 INode *createFile(char *fileName) {
 	
-	char *token = strtok(fileName, "/");
-	char *parent = token;
-	token = strtok(NULL, "/");
-	char *child = token;
+	char *parent = getParent(fileName);
+	char *child = getChild(fileName);
+	
+	if (parent == NULL) {
+		printf("ERROR IN CREATEFILE\n")
+		return NULL;
+	}
 
     INode *newParentInode = findInodeRelatingToFileName(parent, superBlock->rootInode);
 	INode *newInode;
