@@ -403,7 +403,7 @@ int tfs_unmount(void) {
 
 
 /* Helper function to find inode with fileName passed in */
-
+/*
 INode *findInodeRelatingToFileName(char *fileName, INode *currentInode) {
    if(!currentInode) {
       return NULL;
@@ -430,7 +430,7 @@ INode *findInodeRelatingToFileName(char *fileName, INode *currentInode) {
    
    return NULL;
 }
-
+*/
 
 /*
  * Helper function to create a file
@@ -442,7 +442,7 @@ INode *createFile(char *fileName) {
 	token = strtok(NULL, "/");
 	char *child = token;
 
-    INode *newParentInode = findInodeRelatingToFileName(parent, superblock->rootINode);
+    INode *newParentInode = findInodeRelatingToFileName(parent, superBlock->rootInode);
 	INode *newInode;
 
 	if (newParentInode == NULL) {
@@ -822,11 +822,11 @@ void printFileAndDirectories(INode *currentInode) {
    
    printf("%s/%s\n", currentInode->parent->fileName, currentInode->fileName);
 
-   if (currentINode->next != NULL) {
-      if (currentINode->children != NULL) {
-         printFileAndDirectories(currentINode->children);
+   if (currentInode->next != NULL) {
+      if (currentInode->children != NULL) {
+         printFileAndDirectories(currentInode->children);
       }
-      printFileAndDirectories(currentINode->next);
+      printFileAndDirectories(currentInode->next);
    }
    
    return;
