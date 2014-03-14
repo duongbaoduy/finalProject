@@ -128,7 +128,7 @@ INode *findInodeRelatingToFileName(char *fileName, INode *currentInode) {
 	      return currentInode;
 	   }
    } else {
-	   // shouldn't be here
+	   printf("ERROR INVALID FILENAME FINDINODERELATINGTOFILENAME");
    }
      
 
