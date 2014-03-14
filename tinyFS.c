@@ -118,24 +118,27 @@ INode *findInodeRelatingToFileName(char *fileName, INode *currentInode) {
 	
    char* child = getChild(fileName);
    char* parent = getParent(fileName);
+   fprintf(STD"~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+   fprintf("findInode: %s %s\n", chld, parent);
    
-   if (parent && child != NULL) {
-	   if(!strcmp(child, currentInode->fileName)) { // if the file names are the same
+   if (parent && child == NULL) {
+	   if(!strcmp(parent, currentInode->fileName)) { // if the file names are the same
 	      return currentInode;
 	   }
    } else if (parent && child) {
-	   if(!strcmp(fileName, currentInode->fileName) && !strcmp(parent, currentInode->parent->fileName)) { // if the file names are the same
+	   if(!strcmp(fileName, currentInode->fileName) && !strcmp(child, currentInode->children->fileName)) { // if the file names are the same
 	      return currentInode;
 	   }
    } else {
-	   printf("ERROR INVALID FILENAME FINDINODERELATINGTOFILENAME");
+	   printf("$%s$ ERROR INVALID FILENAME FINDINODERELATINGTOFILENAME\n", fileName);
    }
      
 
    if (currentInode->children != NULL) {
       return findInodeRelatingToFileName(fileName, currentInode->children);
    }
-   else if (currentInode->next != NULL) {
+   
+   if (currentInode->next != NULL) {
       return findInodeRelatingToFileName(fileName, currentInode->next);
    }
    
@@ -482,12 +485,15 @@ INode *findInodeRelatingToFile(int fd, INode *currentInode) {
  * Helper function to create a file
  */
 INode *createFile(char *fileName) {
+
 	
 	char *parent = getParent(fileName);
 	char *child = getChild(fileName);
 	
+		//printf("%s %s\n", parent, child);
+	
 	if (parent == NULL) {
-		printf("ERROR IN CREATEFILE\n")
+		printf("ERROR IN CREATEFILE\n");
 		return NULL;
 	}
 
@@ -530,7 +536,9 @@ INode *createFile(char *fileName) {
    }
    
    if (newInode != NULL) return newInode;
+   	printf("after child\n", fileName);
    if (newParentInode != NULL) return newParentInode;
+   	printf("after parent\n", fileName);
    return NULL;
 
 }
@@ -563,6 +571,8 @@ Creates a dynamic resource table entry for the file, and returns a file descript
 */
 
 fileDescriptor tfs_openFile(char *name) {
+
+	printf("open: %s\n", name);
 
    INode *iNode = findInodeRelatingToFileName(name, superBlock->rootInode); // does not address same names, talk to stephen about that
    
