@@ -99,11 +99,26 @@ INode *makeInode(unsigned char blockNum, char *filename, unsigned char data) {
    requiredInfo.magicNumber = 0x45;
    requiredInfo.blockNumber = blockNum;
    
+   char *token = strtok(fileName, "/");
+   char *parent = token;
+   token = strtok(NULL, "/");
+   char *child = token;
+   
    iNode->required = requiredInfo;
-   memcpy((iNode->fileName), filename, 9);
+   
+   if (child != NULL) {
+      memcpy((iNode->fileName), child, 9);
+   } else {
+   	  memcpy((iNode->fileName), parent, 9);
+   }
    iNode->size = 0;
    iNode->data = data;
-   iNode->parent = NULL;
+   
+   if (child != NULL) { 
+      iNode->parent = findInodeRelatingToFileName(parent, rootNode);
+   } else {
+	  iNode->Parent = NULL:
+   }
    iNode->children = NULL;
    iNode->next = NULL:
    iNode->fileDescriptor = -1;
@@ -801,7 +816,7 @@ void printFileAndDirectories(INode *currentInode) {
       return;
    }
    
-   printf("%s\n", currentInode->fileName);
+   printf("%s/%s\n", currentInode->parent->fileName, currentInode->fileName);
 
    if (currentINode->next != NULL) {
       if (currentINode->children != NULL) {
