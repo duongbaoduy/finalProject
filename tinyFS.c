@@ -60,22 +60,31 @@ int checkBlockNumber(char blockNumber, char correctNumber) {
    return 1;
 }
 
-INode *findInodeRelatingToFile(int fd, INode *currentInode) {
-   if(!currentInode) {
-      return NULL;
-   }
+INode *findInodeRelatingToFileName(char *fileName, INode *currentInode) {
+	
+   char *token = strtok(fileName, "/");
+   char *parent = token;
+   token = strtok(NULL, "/");
+   char *child = token;
    
-   if(fd == currentInode->fileDescriptor) {
-      return currentInode;
+   if (parent && child != NULL) {
+	   if(!strcmp(child, currentInode->fileName)) { // if the file names are the same
+	      return currentInode;
+	   }
+   } else if (parent && child) {
+	   if(!strcmp(fileName, currentInode->fileName) && !strcmp(parent, currentInode->parent)) { // if the file names are the same
+	      return currentInode;
+	   }
+   } else {
+	   // shouldn't be here
    }
-   
-   INode *current = currentInode->next;
-   while(current) {
-      INode *found = findInodeRelatingToFile(fd, current);
-      if(found) {
-         return found;
-      }
-      current = current->next;
+     
+
+   if (currentInode.children != null) {
+      return sameMethod(currentInode->children);
+   }
+   else if (currentInode->next != null) {
+      return sameMethod(currentInode->next);
    }
    
    return NULL;
@@ -91,10 +100,12 @@ INode *makeInode(unsigned char blockNum, char *filename, unsigned char data) {
    requiredInfo.blockNumber = blockNum;
    
    iNode->required = requiredInfo;
-   memcpy((iNode->fileName), filename, 8);
+   memcpy((iNode->fileName), filename, 9);
    iNode->size = 0;
    iNode->data = data;
-   iNode->next = NULL;
+   iNode->parent = NULL;
+   iNode->children = NULL;
+   iNode->next = NULL:
    iNode->fileDescriptor = -1;
    iNode->filePointer = 0;
    
@@ -342,18 +353,21 @@ int checkAllInodes(INode *currentInode) {
    if(!currentInode) {
       return 0;
    }
+
    if(checkBlockType(currentInode->required.type, INODE_TYPE) < 0) {
       return DISK_ERROR;
    }
+
    int found  = 0;
-   INode *current = currentInode->next;
-   while(current) {
-      int flag = checkAllInodes(current);
-      if(flag == DISK_ERROR) {
-         return DISK_ERROR;
+   int flag;
+
+   if (currentINode->next != NULL) {
+      if (currentINode->children != NULL) {
+         flag = checkAllInodes(current);
+         if(flag == DISK_ERROR) {
+            return DISK_ERROR;
+         }
       }
-      current = current->next;
-      found += flag;
    }
    
    return ++found;
@@ -374,45 +388,75 @@ int tfs_unmount(void) {
 
 /*
 * Helper function to find inode with fileName passed in
-*/
+
 INode *findInodeRelatingToFileName(char *fileName, INode *currentInode) {
    if(!currentInode) {
       return NULL;
    }
-   //printf("FILENAME: %s\n INODE_NAME: %s\n", fileName, currentInode->fileName);
-   if(!strcmp(fileName, currentInode->fileName)) { // if the file names are the same
+
+   if(!strcmp(fileName, currentInode->fileName)) {
       return currentInode;
    }
-   
-   INode *current = currentInode->next;
-   while(current) {
-      INode *found = findInodeRelatingToFileName(fileName, current);
-      if(found) {
-         return found;
+
+   INode *found;
+
+   if (currentINode->next != NULL) {
+      if (currentINode->children != NULL) {
+         found = findInodeRelatingToFileName(fileName, current->children);
+         if(found) {
+            return fround;
+         }
       }
-      current = current->next;
+      found = findInodeRelatingToFileName(fileName, current->children);
+      if(found) {
+         return fround;
+      }
    }
    
    return NULL;
-
 }
+*/
 
 /*
  * Helper function to create a file
  */
 INode *createFile(char *fileName) {
+	
+	char *token = strtok(fileName, "/");
+	char *parent = token;
+	token = strtok(NULL, "/");
+	char *child = token;
+
+    INode *newParentInode = findInodeRelatingToFileName(parent);
+
+	if (newParentInode == NULL) {
+       FreeBlock *freeParentBlock = superBlock->freeBlocks;
+       superBlock->freeBlocks = freeParentBlock->next; // remove head from freeBlocks list
+       superBlock->numberOfFreeBlocks--;
    
-   FreeBlock *freeBlock = superBlock->freeBlocks;
-   superBlock->freeBlocks = freeBlock->next; // remove head from freeBlocks list
-   superBlock->numberOfFreeBlocks--;
+       INode *newParentInode = makeInode(freeBlock->required.blockNumber, parent, 0); // what is data? change from null to something else
    
-   INode *newInode = makeInode(freeBlock->required.blockNumber, fileName, 0); // what is data? change from null to something else
+       // make from freeblock, add to head of Inode list in superBlock
+       newParentInode->next = superBlock->rootInode;
+       superBlock->rootInode = newParentInode;
+       newParentInode->fileDescriptor = fileDescriptorGenerator++;
+   }
    
-   // make from freeblock, add to head of Inode list in superBlock
-   newInode->next = superBlock->rootInode;
-   superBlock->rootInode = newInode;
+   if (child != NULL) {
+	   FreeBlock *freeBlock = superBlock->freeBlocks;
+	   superBlock->freeBlocks = freeBlock->next; // remove head from freeBlocks list
+	   superBlock->numberOfFreeBlocks--;
    
-   newInode->fileDescriptor = fileDescriptorGenerator++;
+	   INode *newInode = makeInode(freeBlock->required.blockNumber, child, 0); // what is data? change from null to something else
+   
+	   // make from freeblock, add to head of Inode list in superBlock
+	   newInode->next = superBlock->rootInode;
+	   superBlock->rootInode = newInode;
+	   
+	   newParentInode->children = newInode;
+	   
+	   newInode->fileDescriptor = fileDescriptorGenerator++;
+   }
    
    if(writeBlock(disk, 0, superBlock) == -1) {
       printf("WRITE ERROR\n");
@@ -750,6 +794,7 @@ int tfs_rename(char *fileName, char* newName) {
    return 1;
 }
 
+
 void printFileAndDirectories(INode *currentInode) {
 
    if(!currentInode) {
@@ -757,11 +802,13 @@ void printFileAndDirectories(INode *currentInode) {
    }
    
    printf("%s\n", currentInode->fileName);
-   
-   INode *current = currentInode->next;
-   while(current) {
-      printFileAndDirectories(current);
-      current = current->next;
+
+   if (currentINode->next != NULL) {
+      if (currentINode->children != NULL) {
+         printFileAndDirectories(currentINode->children);
+         }
+      }
+      printFileAndDirectories(currentINode->next);
    }
    
    return;
