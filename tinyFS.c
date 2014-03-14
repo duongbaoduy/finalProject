@@ -699,7 +699,7 @@ int tfs_seek(fileDescriptor FD, int offset) {
       return CORRUPTED_DATA_FLAG;
    }
    
-   if(iNode->size > 0 && iNode->filePointer >= iNode->size) {
+   if(iNode->size > 0 && iNode->filePointer >= iNode->size || offset >= iNode->size ) {
       return OUT_OF_BOUNDS_FLAG;
    }
    
