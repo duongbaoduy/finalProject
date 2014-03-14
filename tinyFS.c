@@ -60,14 +60,14 @@ int checkBlockNumber(char blockNumber, char correctNumber) {
    return 1;
 }
 
-char* getChild(char *filename) {
+char* getChild(char *filename, char* child) {
     int first = 0;
     char temp[9];
     memcpy(temp, filename, 8);  
     temp[8] = '\0';
    
     char* parent = NULL;
-    char* child = NULL;
+    child = NULL;
    
     char *p;
     p = strtok (temp, "/");
@@ -87,13 +87,13 @@ char* getChild(char *filename) {
 	return child;
 }
 
-char* getParent(char *filename) {
+char* getParent(char *filename, *parent) {
     int first = 0;
     char temp[9];
     memcpy(temp, filename, 8);  
     temp[8] = '\0';
    
-    char *parent = NULL;
+    parent = NULL;
     char *child = NULL;
    
     char *p;
@@ -115,11 +115,10 @@ char* getParent(char *filename) {
 }
 
 INode *findInodeRelatingToFileName(char *fileName, INode *currentInode) {
+   char* child, parent;
 	
-   char* child = getChild(fileName);
-   char* parent = getParent(fileName);
-   fprintf(STD"~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-   fprintf("findInode: %s %s\n", chld, parent);
+   child = getChild(fileName, child);
+   parent = getParent(fileName, parent);
    
    if (parent && child == NULL) {
 	   if(!strcmp(parent, currentInode->fileName)) { // if the file names are the same
@@ -154,8 +153,10 @@ INode *makeInode(unsigned char blockNum, char *filename, unsigned char data) {
    requiredInfo.magicNumber = 0x45;
    requiredInfo.blockNumber = blockNum;
    
-   char *parent = getParent(filename);
-   char *child = getChild(filename);  
+   char* parent, child;
+   
+   parent = getParent(filename, parent);
+   child = getChild(filename, child);  
    
    iNode->required = requiredInfo;
    
@@ -485,10 +486,10 @@ INode *findInodeRelatingToFile(int fd, INode *currentInode) {
  * Helper function to create a file
  */
 INode *createFile(char *fileName) {
-
+	char* child, parent;
 	
-	char *parent = getParent(fileName);
-	char *child = getChild(fileName);
+	parent = getParent(fileName, parent);
+	child = getChild(fileName, child);
 	
 		//printf("%s %s\n", parent, child);
 	
