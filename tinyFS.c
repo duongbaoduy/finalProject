@@ -72,7 +72,7 @@ INode *findInodeRelatingToFileName(char *fileName, INode *currentInode) {
 	      return currentInode;
 	   }
    } else if (parent && child) {
-	   if(!strcmp(fileName, currentInode->fileName) && !strcmp(parent, currentInode->parent)) { // if the file names are the same
+	   if(!strcmp(fileName, currentInode->fileName) && !strcmp(parent, currentInode->parent->fileName)) { // if the file names are the same
 	      return currentInode;
 	   }
    } else {
@@ -80,10 +80,10 @@ INode *findInodeRelatingToFileName(char *fileName, INode *currentInode) {
    }
      
 
-   if (currentInode.children != null) {
+   if (currentInode->children != NULL) {
       return sameMethod(currentInode->children);
    }
-   else if (currentInode->next != null) {
+   else if (currentInode->next != NULL) {
       return sameMethod(currentInode->next);
    }
    
@@ -99,7 +99,7 @@ INode *makeInode(unsigned char blockNum, char *filename, unsigned char data) {
    requiredInfo.magicNumber = 0x45;
    requiredInfo.blockNumber = blockNum;
    
-   char *token = strtok(fileName, "/");
+   char *token = strtok(filename, "/");
    char *parent = token;
    token = strtok(NULL, "/");
    char *child = token;
@@ -115,12 +115,12 @@ INode *makeInode(unsigned char blockNum, char *filename, unsigned char data) {
    iNode->data = data;
    
    if (child != NULL) { 
-      iNode->parent = findInodeRelatingToFileName(parent, rootNode);
+      iNode->parent = findInodeRelatingToFileName(parent, superBlock->rootInode);
    } else {
-	  iNode->Parent = NULL:
+	  iNode->parent = NULL;
    }
    iNode->children = NULL;
-   iNode->next = NULL:
+   iNode->next = NULL;
    iNode->fileDescriptor = -1;
    iNode->filePointer = 0;
    
@@ -376,9 +376,9 @@ int checkAllInodes(INode *currentInode) {
    int found  = 0;
    int flag;
 
-   if (currentINode->next != NULL) {
-      if (currentINode->children != NULL) {
-         flag = checkAllInodes(current);
+   if (currentInode->next != NULL) {
+      if (currentInode->children != NULL) {
+         flag = checkAllInodes(currentInode);
          if(flag == DISK_ERROR) {
             return DISK_ERROR;
          }
@@ -401,8 +401,8 @@ int tfs_unmount(void) {
    return 1;
 }
 
-/*
-* Helper function to find inode with fileName passed in
+
+/* Helper function to find inode with fileName passed in */
 
 INode *findInodeRelatingToFileName(char *fileName, INode *currentInode) {
    if(!currentInode) {
@@ -430,7 +430,7 @@ INode *findInodeRelatingToFileName(char *fileName, INode *currentInode) {
    
    return NULL;
 }
-*/
+
 
 /*
  * Helper function to create a file
@@ -442,14 +442,16 @@ INode *createFile(char *fileName) {
 	token = strtok(NULL, "/");
 	char *child = token;
 
-    INode *newParentInode = findInodeRelatingToFileName(parent);
+    INode *newParentInode = findInodeRelatingToFileName(parent, superblock->rootINode);
+	INode *newInode;
 
 	if (newParentInode == NULL) {
        FreeBlock *freeParentBlock = superBlock->freeBlocks;
        superBlock->freeBlocks = freeParentBlock->next; // remove head from freeBlocks list
        superBlock->numberOfFreeBlocks--;
    
-       INode *newParentInode = makeInode(freeBlock->required.blockNumber, parent, 0); // what is data? change from null to something else
+       /* im probably an issue freeParentBlock->re, ask Stanley */
+       INode *newParentInode = makeInode(freeParentBlock->required.blockNumber, parent, 0); // what is data? change from null to something else
    
        // make from freeblock, add to head of Inode list in superBlock
        newParentInode->next = superBlock->rootInode;
@@ -462,7 +464,7 @@ INode *createFile(char *fileName) {
 	   superBlock->freeBlocks = freeBlock->next; // remove head from freeBlocks list
 	   superBlock->numberOfFreeBlocks--;
    
-	   INode *newInode = makeInode(freeBlock->required.blockNumber, child, 0); // what is data? change from null to something else
+	   newInode = makeInode(freeBlock->required.blockNumber, child, 0); // what is data? change from null to something else
    
 	   // make from freeblock, add to head of Inode list in superBlock
 	   newInode->next = superBlock->rootInode;
@@ -478,7 +480,9 @@ INode *createFile(char *fileName) {
       return NULL;
    }
    
-   return newInode;
+   if (newInode != NULL) return newInode;
+   if (newParentInode != NULL) return newParentInode;
+   return NULL;
 
 }
 
@@ -821,7 +825,6 @@ void printFileAndDirectories(INode *currentInode) {
    if (currentINode->next != NULL) {
       if (currentINode->children != NULL) {
          printFileAndDirectories(currentINode->children);
-         }
       }
       printFileAndDirectories(currentINode->next);
    }
