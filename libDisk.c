@@ -55,7 +55,7 @@ valid or should an error be thrown?
 */
 int readBlock(int disk, int bNum, void *block) {
 
-   if(lseek(disk, 0, SEEK_SET) < 0 || bNum > 40 || bNum < 0) {
+   if(lseek(disk, 0, SEEK_SET) < 0 || bNum < 0) {
       return -1;
    }
    lseek(disk, bNum * BLOCKSIZE, SEEK_SET);
@@ -73,7 +73,7 @@ opened) or any other failures. You must define your own error code system. */
 
 int writeBlock(int disk, int bNum, void *block) {
 
-   if(lseek(disk, 0, SEEK_SET) < 0 || bNum > 40 || bNum < 0) {
+   if(lseek(disk, 0, SEEK_SET) < 0 || bNum < 0) {
       return -1;
    }
    lseek(disk, bNum * BLOCKSIZE, SEEK_SET);
