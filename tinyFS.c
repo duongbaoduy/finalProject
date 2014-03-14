@@ -81,10 +81,10 @@ INode *findInodeRelatingToFileName(char *fileName, INode *currentInode) {
      
 
    if (currentInode->children != NULL) {
-      return sameMethod(currentInode->children);
+      return findInodeRelatingToFileName(fileName, currentInode->children);
    }
    else if (currentInode->next != NULL) {
-      return sameMethod(currentInode->next);
+      return findInodeRelatingToFileName(fileName, currentInode->next);
    }
    
    return NULL;
@@ -403,34 +403,30 @@ int tfs_unmount(void) {
 
 
 /* Helper function to find inode with fileName passed in */
-/*
-INode *findInodeRelatingToFileName(char *fileName, INode *currentInode) {
-   if(!currentInode) {
-      return NULL;
-   }
 
-   if(!strcmp(fileName, currentInode->fileName)) {
-      return currentInode;
-   }
+INode *findInodeRelatingToFile(int fd, INode *currentInode) {
 
-   INode *found;
-
-   if (currentINode->next != NULL) {
-      if (currentINode->children != NULL) {
-         found = findInodeRelatingToFileName(fileName, current->children);
-         if(found) {
-            return fround;
-         }
-      }
-      found = findInodeRelatingToFileName(fileName, current->children);
-      if(found) {
-         return fround;
-      }
-   }
-   
-   return NULL;
+    if(fd == currentInode->fileDescriptor) {
+        return currentInode;
+	}
+	
+	INode *found;
+	
+    if (currentInode->next != NULL) {
+       if (currentInode->children != NULL) {
+          found = findInodeRelatingToFile(fd, currentInode->children);
+          if(found) {
+             return found;
+          }
+       }
+       found = findInodeRelatingToFile(fd, currentInode->next);
+       if(found) {
+          return found;
+       }
+    }	  
+	 
+	return NULL;
 }
-*/
 
 /*
  * Helper function to create a file
