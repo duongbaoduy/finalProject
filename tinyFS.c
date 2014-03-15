@@ -61,25 +61,14 @@ int checkBlockNumber(char blockNumber, char correctNumber) {
 }
 
 INode *findInodeRelatingToFile(int fd, INode *currentInode) {
-   if(!currentInode) {
-      return NULL;
-   }
-   
-   if(fd == currentInode->fileDescriptor) {
-      return currentInode;
-   }
-   
-   INode *current = currentInode->next;
-   while(current) {
-      INode *found = findInodeRelatingToFile(fd, current);
-      if(found) {
-         return found;
-      }
-      current = current->next;
+   while (currentInode) {
+      if (fd == currentInode->fileDescriptor)) {
+	     return currentInode;
+	  }
+	  currentInode = currentInode->next;
    }
    
    return NULL;
-
 }
 
 INode *makeInode(unsigned char blockNum, char *filename, unsigned char data) {
@@ -301,62 +290,38 @@ int checkForDiskError(int diskToCheck, SuperBlock *superBlockToCheck) {
 }
 
 int checkAllFileExtents(int diskToCheck, SuperBlock *superBlock) {
-   return countfileExtents(diskToCheck, superBlock->rootInode);;
+   return countFileExtents(diskToCheck, superBlock->rootInode);;
 }
 
-int  countfileExtents(int diskToCheck, INode *currentInode) {
+int countFileExtents(int diskToCheck, INode *currentInode) {
   int numberOfFileExtents = 0;
-  if(!currentInode) {
-      return 0;
-   }
-   if(currentInode->next == NULL && currentInode->data > 0) {
-      FileExtent *fileExtent;
-      readBlock(diskToCheck, currentInode->data, fileExtent);
-      numberOfFileExtents++;
-      
-      while(fileExtent->next) {
-      if(checkBlockType(fileExtent->required.type, FILE_EXTENT_TYPE)< 0) {
-         return -1;
-      }
-         numberOfFileExtents++;
-         fileExtent = fileExtent->next;
-      }
-   }
-  else {
-      INode *current = currentInode->next;
-      while(current) {
-         int flag = countfileExtents(diskToCheck, current);
-         if(flag == DISK_ERROR) {
-            return DISK_ERROR;
-         }
-         
-         numberOfFileExtents += flag;
-         current = current->next;
-      }
-   }
-   
-   return numberOfFileExtents;
+  FileExtent *fileExtent;
+  
+  while (currentInode) {
+     fileExtent = currentInode->fileExtent;
+
+     while (fileExtent) {
+	    fileExtent = fileExtent->next;
+		numberOfFileExtents++;
+	 }
+	 currentInode = currentInode->next;
+  }
+  
+  return numberOfFileExtents;
 }
 
-int checkAllInodes(INode *currentInode) {
-   if(!currentInode) {
-      return 0;
-   }
-   if(checkBlockType(currentInode->required.type, INODE_TYPE) < 0) {
-      return DISK_ERROR;
-   }
-   int found  = 0;
-   INode *current = currentInode->next;
-   while(current) {
-      int flag = checkAllInodes(current);
-      if(flag == DISK_ERROR) {
+int checkAllInodes(INode *iNode) { //rootInode is passed in
+   int count = 0;
+
+   while (iNode) {
+      if(checkBlockType(iNode->required.type, INODE_TYPE) < 0) {
          return DISK_ERROR;
       }
-      current = current->next;
-      found += flag;
+	  iNode = iNode->next;
+	  count++;
    }
    
-   return ++found;
+   return count;
 }
 
 //MIGHT WANT TO CLEAR EVERYTHING
@@ -376,25 +341,14 @@ int tfs_unmount(void) {
 * Helper function to find inode with fileName passed in
 */
 INode *findInodeRelatingToFileName(char *fileName, INode *currentInode) {
-   if(!currentInode) {
-      return NULL;
-   }
-   //printf("FILENAME: %s\n INODE_NAME: %s\n", fileName, currentInode->fileName);
-   if(!strcmp(fileName, currentInode->fileName)) { // if the file names are the same
-      return currentInode;
-   }
-   
-   INode *current = currentInode->next;
-   while(current) {
-      INode *found = findInodeRelatingToFileName(fileName, current);
-      if(found) {
-         return found;
-      }
-      current = current->next;
+   while (currentInode) {
+      if (!strcmp(fileName, currentInode->fileName)) {
+	     return currentInode;
+	  }
+	  currentInode = currentInode->next;
    }
    
    return NULL;
-
 }
 
 /*
@@ -451,10 +405,17 @@ fileDescriptor tfs_openFile(char *name) {
    INode *iNode = findInodeRelatingToFileName(name, superBlock->rootInode); // does not address same names, talk to stephen about that
    
     if(!iNode) {
-      iNode = createFile(name); // MAKE A NEW FILE 
-	  time_t ctime = time(NULL);
-      iNode->creation = ctime;
-	  iNode->modification = ctime;
+	  
+	  if (superBlock->numberOfFreeBlocks <= 0) {
+	     printf("NOT ENOUGH SPACE IN DISK\n");
+         return DISK_OUT_OF_SPACE;
+	  }
+	  else {
+         iNode = createFile(name); // MAKE A NEW FILE 
+	     time_t ctime = time(NULL);
+         iNode->creation = ctime;
+	     iNode->modification = ctime;
+	  }
     }
    
     if(iNode == NULL || checkMagicNumber(iNode->required.magicNumber) < 0) {
@@ -630,9 +591,7 @@ int tfs_deleteFile(fileDescriptor FD) {
       previousNode->next = iNode->next; // removes iNode from linked list
    }
    
-   int tempBlockNum = iNode->required.blockNumber; // maybe not necessary
-   
-   writeBlock(disk, tempBlockNum, freeBlock); // WHAT DO I WANT HERE? DO I WRITE AN EMPTY BLOCK? JUST REQUIRED INFO? WHAT?
+   writeBlock(disk, iNode->required.blockNumber;, freeBlock); 
    
    writeBlock(disk, 0, superBlock);
    
@@ -747,22 +706,19 @@ int tfs_rename(char *fileName, char* newName) {
    return 1;
 }
 
-void printFileAndDirectories(INode *currentInode) {
+void printFiles() {
+
+   INode *iNode = superBlock->rootInode;
 
    if(!currentInode) {
       return;
    }
    
-   printf("%s\n", currentInode->fileName);
-   
-   INode *current = currentInode->next;
-   while(current) {
-      printFileAndDirectories(current);
-      current = current->next;
+   while (iNode->next != NULL) {
+      printf("%s\n", iNode->fileName;
+	  iNode = iNode->next;
    }
-   
    return;
-
 }
 
 int tfs_readdir() {
