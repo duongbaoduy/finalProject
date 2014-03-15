@@ -138,41 +138,41 @@ the superblock and inodes, etc. Must return a specified success/error code. */
 int tfs_mkfs(char *filename, int nBytes) {
 	SuperBlock* temp = superBlocks;
 	int found = 0;
+	int oldDisk = disk;
 	
 	// while(superBlocks != NULL, the current superBlock != filename, it has next one)
-	while (superBlocks && strcmp(superBlocks->filename, filename) &&  temp->next)
-	{
-		if (!strcmp(superBlocks->filename, filename)) {
-			found = 1;
-			break;
-		}
-		temp = temp->next; 
-	}
-	
-	if(found) {
-		return 1;
-	}
+   while (temp) {
+      if (!strcmp(temp->filename, filename)) {
+         found = 1;
+      }
+      temp = temp->next;
+   }
+
+
 	//if temp == null then superBlocks == null and ther are no superblocks in superblocks
 	//if temp != null and found == 0 then superblocks exists but doensn't contain filename
 	//if found then temp then temp is the correct one   
    int nonMountedDisk = openDisk(filename, nBytes);
-  
+   disk = nonMountedDisk;
    if(nonMountedDisk < 0) {
       printf("CANT FIND DISK!\n");
+      disk = oldDisk;
       return DISK_ERROR;
    }
    
    int i = 0;
    for(i = 0; i < nBytes / BLOCKSIZE; i++) {
       if(cleanBlock(i) < 0) {
+         disk = oldDisk;
          return READ_WRITE_ERROR;
       }
    }
-   SuperBlock *superBlock = calloc(sizeof(SuperBlock), 1);
+   superBlock = calloc(sizeof(SuperBlock), 1);
    
    rootINode = makeInode(1, "rootNode", 0);
   
    if(writeBlock(nonMountedDisk, 1, rootINode) == - 1) {
+      disk = oldDisk;      
       return READ_WRITE_ERROR;
    }
    
@@ -183,8 +183,9 @@ int tfs_mkfs(char *filename, int nBytes) {
    
    superBlock->required = requiredInfo;
    superBlock->rootInode = rootINode;
-   superBlock->name = filename;
-   superBlock->name[19] = '\0';
+   superBlock->filename = calloc(sizeof(char), 20);
+   memcpy(superBlock->filename, filename, 20);
+   superBlock->filename[19] = '\0';
    
    FreeBlock *freeBlocks = NULL;
    int numFreeBlocks = 0;
@@ -209,14 +210,16 @@ int tfs_mkfs(char *filename, int nBytes) {
    superBlock->numberOfFreeBlocks = numFreeBlocks;
  
    if(writeBlock(nonMountedDisk, 0, superBlock) == -1) {
+      disk = oldDisk;
       printf("WRITE ERROR\n");
       return READ_WRITE_ERROR;
    }
    if(!superBlocks) {
-	   superBlocks = superBlock
+	   superBlocks = superBlock;
    }
    else {
       superBlock->next = superBlocks;
+      superBlocks = superBlock;
   }
    return 1;
 }
@@ -231,21 +234,22 @@ success/error code. */
 int tfs_mount(char *filename) {
 	
 	SuperBlock* temp = superBlocks;
+	SuperBlock *foundSuperBlock  = NULL;
 	int found = 0;
+	int oldDisk = disk;
 	
 	// while(superBlocks != NULL, the current superBlock != filename, it has next one)
-	while (superBlocks && strcmp(superBlocks->filename, filename) &&  temp->next)
-	{
-		if (!strcmp(superBlocks->filename, filename)) {
-			found = 1;
-			break;
-		}
-		temp = temp->next; 
-	}
-    
-	if(!found) {
-		return DISK_ERROR;
-	}	
+   while (temp) {
+      if (!strcmp(temp->filename, filename)) {
+         found = 1;
+         foundSuperBlock = temp;
+      }
+      temp = temp->next;
+   }
+   if(!found) {
+      return DISK_ERROR;
+   }
+   
 	//if temp == null then superBlocks == null and ther are no superblocks in superblocks
 	//if temp != null and found == 0 then superblocks exists but doensn't contain filename
 	//if found then temp then temp is the correct one
@@ -257,21 +261,26 @@ int tfs_mount(char *filename) {
 
    char buffer[BLOCKSIZE];
    int diskToCheck = openDisk(filename, DEFAULT_DISK_SIZE);
-
+   disk = diskToCheck;
+   
    if(diskToCheck < 0) {
+      disk = oldDisk;
       return DISK_ERROR;
    }
+   
    readBlock(diskToCheck, 0, buffer);
 
    
 
-   if(temp->required.type != SUPERBLOCK_TYPE 
-      || temp->required.magicNumber != MAGIC_NUMBER) {
+   if(foundSuperBlock ->required.type != SUPERBLOCK_TYPE 
+      || foundSuperBlock ->required.magicNumber != MAGIC_NUMBER) {
+       disk = oldDisk;
        return DISK_ERROR;
    }
 
-   if(checkForDiskError(diskToCheck, temp) < 0) {
+   if(checkForDiskError(diskToCheck, foundSuperBlock ) < 0) {
       printf("FILE SYSTEM IS NOT IN A CONSISTANT STATE\n");
+      disk = oldDisk;
       return DISK_ERROR;
    }
    else {
@@ -281,16 +290,9 @@ int tfs_mount(char *filename) {
       }
   
       tfs_unmount();
-      superBlock = temp;
+      superBlock = foundSuperBlock;
       isMounted = 1;
       disk = diskToCheck;
-   }
-   
-   if (superBlocks) {
-	   temp->next = superBlock;
-   }
-   else {
-      superBlocks = superBlock;
    }
    
    return 1;
@@ -396,7 +398,7 @@ int tfs_unmount(void) {
 */
 INode *findInodeRelatingToFileName(char *fileName, INode *currentInode) {
    while (currentInode) {
-      if (!strcmp(fileName, currentInode->fileName)) {
+      if (!strcmp(currentInode->fileName, fileName)) {
 	     return currentInode;
 	  }
 	  currentInode = currentInode->next;
@@ -659,7 +661,7 @@ increment the file pointer. */
 
 int tfs_readByte(fileDescriptor FD, char *buffer) {
    INode *iNode = findInodeRelatingToFile(FD, superBlock->rootInode);
-   if(!iNode) {
+   if(!iNode || !(iNode->fileExtent)) {
       printf("COULDNT FIND THE FILE :(\n");
       return FILE_NOT_FOUND;
    }
@@ -880,7 +882,7 @@ void tfs_defrag() {
 	
 	FreeBlock *freeBlock = superBlock->freeBlocks;
 	
-	for(; blockToPutIn; blockToPutIn++) {
+	for(; freeBlock && blockToPutIn; blockToPutIn++) {
 	   cleanBlock(blockToPutIn);
 	   freeBlock->required.blockNumber = blockToPutIn;
 	   freeBlock = freeBlock->next;
@@ -897,21 +899,23 @@ void tfs_displayFragments() {
 		int type = buffer[TYPE_OFFSET];
 		
 		if(type == SUPERBLOCK_TYPE) {
-			printf("S ");
+			printf("%2s ","S");
 		}
 		else if(type == INODE_TYPE) {
-			printf("I ");
+			printf("%2s ","I");
 		}
 		else if(type == FILE_EXTENT_TYPE) {
-			printf("FE ");
+			printf("%2s ","FE");
 		}
 		else if(type == FREE_TYPE)  {
-			printf("F ");
+			printf("%2s ", "F");
 		}
 		
-		if(counter % 10  == 0) {
+		if((counter + 1) % 10  == 0) {
 			printf("\n");
 		}
 	}
+	
+	printf("\n");
 	
 }
