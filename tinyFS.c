@@ -826,7 +826,7 @@ void tfs_defrag() {
 	
 	FreeBlock *freeBlock = superBlock->freeBlocks;
 	
-	for(; blockToPutIn; blockToPutIn++) {
+	for(; freeBlock && blockToPutIn; blockToPutIn++) {
 	   cleanBlock(blockToPutIn);
 	   freeBlock->required.blockNumber = blockToPutIn;
 	   freeBlock = freeBlock->next;
