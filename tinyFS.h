@@ -38,7 +38,7 @@ typedef struct INode {
    short fileDescriptor; // needed because we could  have two of the same files.
    unsigned short filePointer; 
    FileExtent *fileExtent;
-   unsigned char writeFlag;
+   unsigned char readWriteFlags;
    time_t creation;
    time_t access;
    time_t modification;
