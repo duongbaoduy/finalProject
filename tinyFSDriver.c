@@ -46,6 +46,7 @@ int main() {
    disk = openDisk("defaultDisk", 10240);
    testPhaseOne();
    testPhaseTwo();
+   testMakeRO();
 
 
 }
@@ -82,6 +83,30 @@ int testPhaseTwo() {
 	   testForErrors(error);
    }
 
+}
+
+int testMakeRO() {
+   printf("Opening File1\n");
+   fd1 = tfs_openFile("file1");
+   testForErrors(fd1);
+
+   tfs_makeRO("file1");
+   if (tfs_writeFile(fd1, a, 256) != READ_WRITE_ERROR) {
+      printf("writeFile failed to throw READ_WRITE_ERROR\n");
+   }
+   if (tfs_writeByte(fd1, 1) != READ_WRITE_ERROR) {
+	  printf("writeByte failed to throw READ_WRITE_ERROR\n");
+   }
+   
+   tfs_makeRW("file1");
+   int error = tfs_writeFile(fd1, a , 256);
+   if (error != 1) {
+      printf("WRITEFILE ERROR NUMBER %d\n", error);
+   }
+   error = tfs_writeByte(fd1, 1);
+   if (error != 1) {
+      printf("WRITEBYTE ERROR NUMBER %d\n", error);
+   }
 }
 
 int testReadSeek() {
