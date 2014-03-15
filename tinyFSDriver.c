@@ -194,7 +194,7 @@ int testTooManyFiles() {
 
 int testLargeThenSmall() {
 	
-    printf("Opening File3\n");
+    printf("Creating Large File\n");
     fd3 = tfs_openFile("file3");
     testForErrors(fd3);  
 
@@ -203,12 +203,14 @@ int testLargeThenSmall() {
 	
 	tfs_displayFragments();
 	
+	printf("Creating Small File\n");
+	
     error = tfs_writeFile(fd1, a, 100);
     testForErrors(error);  
 	
 	tfs_displayFragments();
 	
-    printf("Deleting File1\n");
+    printf("Deleting Files\n");
     error = tfs_deleteFile(fd1);
     testForErrors(error); 
 	
