@@ -194,24 +194,21 @@ int testTooManyFiles() {
 	
 	printf("Creating too many files\n");
 	char buffer[2];
+	int files[40];
 	int ndx = 0;
 	for (ndx = 0; ndx < 40; ndx++) {
 		memcpy(buffer, &ndx, 1);
 		buffer[1] = '\0';
 		
-		
-	    fd1 = tfs_openFile(buffer);
-	    testForErrors(fd1); 
+	    files[ndx] = tfs_openFile(buffer);
+	    testForErrors(files[ndx]); 
 	}
-	/*
-	for (ndx = 0; ndx < 40; ndx++) {
-		memcpy(buffer, &ndx, 1);
-		buffer[1] = '\0';
-			
-	   error = tfs_deleteFile(buffer);
+	
+	for (ndx = 0; ndx < 40; ndx++) {		
+	   error = tfs_deleteFile(files[ndx]);
 	   testForErrors(error);
 	}
-	*/
+	
 	
 	printf("Deleting files\n");
 	  
@@ -232,6 +229,10 @@ int testLargeThenSmall() {
 	
     error = tfs_writeFile(fd1, a, 100);
     testForErrors(error);  
+	
+	tfs_displayFragments();
+	
+	tfs_defrag();
 	
 	tfs_displayFragments();
 	
