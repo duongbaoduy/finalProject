@@ -220,6 +220,9 @@ int testLargeThenSmall() {
     fd3 = tfs_openFile("file3");
     testForErrors(fd3);  
 
+    printf("Printing Out File Time for Large File\n");
+    tfs_readFileInfo(fd3);
+
     error = tfs_writeFile(fd1, a, 1024);
     testForErrors(error);  
 	
@@ -227,8 +230,8 @@ int testLargeThenSmall() {
 	
 	printf("Creating Small File\n");
 	
-    error = tfs_writeFile(fd1, a, 100);
-    testForErrors(error);  
+   error = tfs_writeFile(fd1, a, 100);
+   testForErrors(error);  
 	
 	tfs_displayFragments();
 	
@@ -247,17 +250,27 @@ int testOpenCloseFile() {
       fd1 = tfs_openFile("file1");
       testForErrors(fd1);  
       
+      printf("Printing Out File Time for File1\n");
+      tfs_readFileInfo(fd1);
+      
       printf("Opening File2\n");
       fd2 = tfs_openFile("file2");
       testForErrors(fd2);  
+
+      printf("Printing Out File Time for File2\n");
+      tfs_readFileInfo(fd2);
 /*      
+
       printf("Closing File1\n");
       tfs_closeFile(fd1);
       testForErrors(fd1);  
 */      
       printf("Opening File3\n");
       fd3 = tfs_openFile("file3");
-      testForErrors(fd3);  
+      testForErrors(fd3); 
+      
+      printf("Printing Out File Time for File3\n");
+      tfs_readFileInfo(fd3) 
 /*      
       printf("Closing File3\n");
       error = tfs_closeFile(fd3);
@@ -276,7 +289,7 @@ int testMakeMountUnmount() {
    printf("Making Disk\n");
    error = tfs_mkfs("defaultDisk", 10240);
    testForErrors(error);  
-  /* 
+ 
    printf("Mounting Disk\n");
    error = tfs_mount("defaultDisk");
    testForErrors(error);  
@@ -300,7 +313,6 @@ int testMakeMountUnmount() {
    printf("Mounting Disk\n");
    error = tfs_mount("defaultDisk");
    testForErrors(error);  
-   */
 }
 
 int testPhaseOne() {
