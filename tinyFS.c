@@ -140,7 +140,7 @@ int cleanBlock(int blockNum) {
 }
 
 /* Makes a blank TinyFS file system of size nBytes on the file specified by
-‘filename’. This function should use the emulated disk library to open the
+â€˜filenameâ€™. This function should use the emulated disk library to open the
 specified file, and upon success, format the file to be mountable. This includes
 initializing all data to 0x00, setting magic numbers, initializing and writing
 the superblock and inodes, etc. Must return a specified success/error code. */
@@ -207,8 +207,8 @@ int tfs_mkfs(char *filename, int nBytes) {
    return 1;
 }
 
-/* tfs_mount(char *filename) “mounts” a TinyFS file system located within
-‘filename’. tfs_unmount(void) “unmounts” the currently mounted file system.
+/* tfs_mount(char *filename) â€œmountsâ€ a TinyFS file system located within
+â€˜filenameâ€™. tfs_unmount(void) â€œunmountsâ€ the currently mounted file system.
 As part of the mount operation, tfs_mount should verify the file system is
 the correct type. Only one file system may be mounted at a time. Use tfs_unmount
 to cleanly unmount the currently mounted file system. Must return a specified
@@ -406,7 +406,7 @@ INode *createFile(char *fileName) {
    superBlock->freeBlocks = freeBlock->next; // remove head from freeBlocks list
    superBlock->numberOfFreeBlocks--;
    
-   INode *newInode = makeInode(freeBlock->required.blockNumber, fileName, 0); // what is data? change from null to something else
+   INode *newInode = makeInode(freeBlock->required.blockNumber, fileName, 0);
    
    // make from freeblock, add to head of Inode list in superBlock
    newInode->next = superBlock->rootInode;
@@ -423,23 +423,19 @@ INode *createFile(char *fileName) {
 
 }
 
-void freeFileExtents(INode *iNode) { //verify with stephen
+void freeFileExtents(INode *iNode) { 
    FileExtent *fileExtent = iNode->fileExtent;
    
    while (fileExtent != NULL) {
-      int tempBlockNum = fileExtent->required.blockNumber; // need this because I clean the block
-     FileExtent *temp = fileExtent; // does it make sense to do this for writeBlock?
+      int tempBlockNum = fileExtent->required.blockNumber; 
+     FileExtent *temp = fileExtent; 
      fileExtent = fileExtent->next;
      FreeBlock *freeBlock = makeFreeBlock(temp->required.blockNumber);
      
-     
-      // is cleanBlock even necessary in this? does this even matter because writeBlock is all that affects the disk? do i have to wipe the fileExtent?
-     cleanBlock(tempBlockNum); // IS THIS OKAY? SHOULD I LEAVE REQUIRED INFO OR DOES THIS WIPE IT ALL OUT? WHY DOES IT WRITE? WE RESPONSIBLE FOR MEMORY?
+     cleanBlock(tempBlockNum);
       freeBlock->next = superBlock->freeBlocks; // adds freeBlock back into linked list
       superBlock->freeBlocks = freeBlock;
       superBlock->numberOfFreeBlocks++;
-     
-    // writeBlock(disk, tempBlockNum, temp); // VERIFY WITH STEVEN IF THIS MAKES SENSE AS A 3RD PARAMETER
      
      writeBlock(disk, 0, superBlock);
    }
@@ -456,6 +452,9 @@ fileDescriptor tfs_openFile(char *name) {
    
     if(!iNode) {
       iNode = createFile(name); // MAKE A NEW FILE 
+	  time_t ctime = time(NULL);
+      iNode->creation = ctime;
+	  iNode->modification = ctime;
     }
    
     if(iNode == NULL || checkMagicNumber(iNode->required.magicNumber) < 0) {
@@ -468,9 +467,7 @@ fileDescriptor tfs_openFile(char *name) {
    
    openFiles[iNode->fileDescriptor] = 1; // sets file to open
    
-   time_t ctime = time(NULL);
-    iNode->creation = ctime;
-    iNode->modification = ctime;
+    time_t ctime = time(NULL);
     iNode->access = ctime;
    
    openFiles[iNode->fileDescriptor] = 1;
@@ -506,7 +503,7 @@ int tfs_closeFile(fileDescriptor FD) {
 }
    
 
-/* Writes buffer ‘buffer’ of size ‘size’, which represents an entire file’s
+/* Writes buffer â€˜bufferâ€™ of size â€˜sizeâ€™, which represents an entire fileâ€™s
 content, to the file system. Sets the file pointer to 0 (the start of file)
 when done. Returns success/error codes. */
 
@@ -548,12 +545,12 @@ int tfs_writeFile(fileDescriptor FD,char *buffer, int size) { // does writing wr
    if (openFiles[iNode->fileDescriptor] == 0) {
       return FILE_IS_CLOSED;
    }
-/*   
-   if (iNode->writeFlag == 0) {
+   
+   if (iNode->readWriteFlags == 1) {
       //throw error because file can only be read from
      return READ_WRITE_ERROR; 
    }
-*/   
+   
    time_t ctime = time(NULL);
    iNode->modification = ctime;
    iNode->access = ctime;
@@ -777,33 +774,30 @@ int tfs_readdir() {
    return 1;
 }
 
-int tfs_createDir(char *dirName) {
-
-
-   return 1;
-}
-
-int tfs_removeDir(char *dirName) {
-
-
-   return 1;
-}
-
-int tfs_removeAll(char *dirName) {
-
-
-   return 1;
-}
-
 int tfs_makeRO(char *name) {
-   
+   INode *iNode = findInodeRelatingToFileName(name, superBlock->rootInode);
 
+   time_t ctime = time(NULL);
+   iNode->modification = ctime;
+   iNode->access = ctime;
+   
+   iNode->readWriteFlags = 1;
+   
+   writeBlock(disk, iNode->required.blockNumber, iNode);
    return 1;
 }
 
 int tfs_makeRW(char *name) {
+   INode *iNode = findInodeRelatingToFileName(name, superBlock->rootInode);
 
-   return 1 ;
+   time_t ctime = time(NULL);
+   iNode->modification = ctime;
+   iNode->access = ctime;
+   
+   iNode->readWriteFlags = 0;
+   
+   writeBlock(disk, iNode->required.blockNumber, iNode);
+   return 1;
 }
 
 int tfs_writeByte(fileDescriptor FD, unsigned int data) {
@@ -822,6 +816,11 @@ int tfs_writeByte(fileDescriptor FD, unsigned int data) {
       return OUT_OF_BOUNDS_FLAG;
    }
 
+   if (iNode->readWriteFlags == 1) {
+      //throw error because file can only be read from
+     return READ_WRITE_ERROR; 
+   }
+   
    int blockNum = iNode->filePointer / (BLOCKSIZE - FE_SIZE);
    
    if(iNode->filePointer % (BLOCKSIZE - FE_SIZE) == 0) {
@@ -844,4 +843,64 @@ int tfs_writeByte(fileDescriptor FD, unsigned int data) {
    writeBlock(disk, iNode->required.blockNumber, iNode);
 
    return 1;
+}
+
+void tfs_defrag() {
+	int blockToPutIn = 0;
+	int currentBlock = 0;
+	int flag = 1;
+	char buffer[256];	
+	
+	for(currentBlock = 0; currentBlock < 10240 / 256; currentBlock++) {
+		readBlock(disk, currentBlock, buffer);
+		
+		if(flag && buffer[TYPE_OFFSET] == FREE_TYPE) {
+			blockToPutIn = currentBlock;
+			flag = 0;
+		}
+		else if(buffer[TYPE_OFFSET] == FREE_TYPE) {
+			continue;
+		}
+		else if(!flag) {
+			writeBlock(disk, blockToPutIn, buffer);
+			blockToPutIn++;
+		}
+	}
+	
+	FreeBlock *freeBlock = superBlock->freeBlocks;
+	
+	for(; blockToPutIn; blockToPutIn++) {
+	   cleanBlock(blockToPutIn);
+	   freeBlock->required.blockNumber = blockToPutIn;
+	   freeBlock = freeBlock->next;
+	}
+}
+
+void tfs_displayFragments() {
+	char buffer[256];
+	int counter = 0;
+	int i = 0;
+	
+	for(i = 0; i < 10240 / 256; i++, counter++) {
+		readBlock(disk, i, buffer);
+		int type = buffer[TYPE_OFFSET];
+		
+		if(type == SUPERBLOCK_TYPE) {
+			printf("S ");
+		}
+		else if(type == INODE_TYPE) {
+			printf("I ");
+		}
+		else if(type == FILE_EXTENT_TYPE) {
+			printf("FE ");
+		}
+		else if(type == FREE_TYPE)  {
+			printf("F ");
+		}
+		
+		if(counter % 10  == 0) {
+			printf("\n");
+		}
+	}
+	
 }
