@@ -862,6 +862,7 @@ void tfs_defrag() {
 			continue;
 		}
 		else if(!flag) {
+		   memset(buffer + BLOCK_NUMBER_OFFSET, blockToPutIn, 1);
 			writeBlock(disk, blockToPutIn, buffer);
 			blockToPutIn++;
 		}
