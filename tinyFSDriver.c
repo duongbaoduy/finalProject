@@ -45,18 +45,20 @@ int main() {
 
    disk = openDisk("defaultDisk", 10240);
    testPhaseOne();
+   
+   int error = testMakeMountUnmount(); // tests file system consistency checks
+   testForErrors(error);
+   
    testPhaseTwo();
-   testMakeRO();
-   testDirectoryListingAndRenaming();
-   testWriteByte();
+   
+   testTimeStamps(); // tests TimeStamp implementation
+   testMakeRO(); // tests ReadOnly implementation
+   testDirectoryListingAndRenaming(); // tests Directory Listing and Renaming implementation
+   testWriteByte(); // tests writeByte implementation
 
 
 }
 int testPhaseTwo() {
-   if(TEST_MAKE_MOUNT_UNMOUNT) {
-      error = testMakeMountUnmount();
-      testForErrors(error);
-   }
    if(TEST_OPEN_CLOSE_FILE) {
       testOpenCloseFile();
       testForErrors(error);
@@ -111,6 +113,21 @@ int testMakeRO() {
    if (error != 1) {
       printf("WRITEBYTE ERROR NUMBER %d\n", error);
    }
+}
+
+int testTimeStamps() {
+   fileDescriptor tempFile;
+
+   printf("Testing TimeStamps...\n");
+   printf("Creating tempFile...\n");
+   tempFile = tfs_openFile("tempFile");
+   printf("Printing Out TimeStamp info for newly created tempFile...\n");
+   tfs_readFileInfo(tempFile);
+   printf("Writing to tempFile and then printing out updated TimeStamp for tempFile...\n");
+   tfs_writeFile(tempFile, a, 20);
+   tfs_readFileInfo(tempFile);
+   tfs_deleteFile(tempFile);
+   printf("\n");
 }
 
 int testReadSeek() {
