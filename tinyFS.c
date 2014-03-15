@@ -62,7 +62,7 @@ int checkBlockNumber(char blockNumber, char correctNumber) {
 
 INode *findInodeRelatingToFile(int fd, INode *currentInode) {
    while (currentInode) {
-      if (fd == currentInode->fileDescriptor)) {
+      if (fd == currentInode->fileDescriptor) {
 	     return currentInode;
 	  }
 	  currentInode = currentInode->next;
@@ -591,7 +591,7 @@ int tfs_deleteFile(fileDescriptor FD) {
       previousNode->next = iNode->next; // removes iNode from linked list
    }
    
-   writeBlock(disk, iNode->required.blockNumber;, freeBlock); 
+   writeBlock(disk, iNode->required.blockNumber, freeBlock); 
    
    writeBlock(disk, 0, superBlock);
    
@@ -710,12 +710,12 @@ void printFiles() {
 
    INode *iNode = superBlock->rootInode;
 
-   if(!currentInode) {
+   if(!iNode) {
       return;
    }
    
    while (iNode->next != NULL) {
-      printf("%s\n", iNode->fileName;
+      printf("%s\n", iNode->fileName);
 	  iNode = iNode->next;
    }
    return;
@@ -724,7 +724,7 @@ void printFiles() {
 int tfs_readdir() {
    
    if(superBlock->rootInode) {
-      printFileAndDirectories(superBlock->rootInode->next);
+      printFiles();
    }
 
    return 1;
