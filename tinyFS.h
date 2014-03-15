@@ -20,6 +20,8 @@ typedef struct SuperBlock {
    struct INode *rootInode;
    FreeBlock *freeBlocks;
    unsigned short numberOfFreeBlocks;
+   struct SuperBlock *next;
+   char* filename;
 } SuperBlock;
 
 typedef struct FileExtent {
