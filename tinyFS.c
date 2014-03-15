@@ -843,19 +843,19 @@ void tfs_displayFragments() {
 		int type = buffer[TYPE_OFFSET];
 		
 		if(type == SUPERBLOCK_TYPE) {
-			printf("S ");
+			printf("%2s ", "S");
 		}
 		else if(type == INODE_TYPE) {
-			printf("I ");
+			printf("%2s ", "I");
 		}
 		else if(type == FILE_EXTENT_TYPE) {
-			printf("FE ");
+			printf("%2s ", "FE");
 		}
 		else if(type == FREE_TYPE)  {
-			printf("F ");
+			printf("%2s ", "F");
 		}
 		
-		if(counter % 10  == 0) {
+		if((counter + 1) % 10  == 0) {
 			printf("\n");
 		}
 	}
