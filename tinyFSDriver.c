@@ -8,6 +8,8 @@
 #define TEST_WRITE_FILE 1
 #define TEST_DELETE_FILE 0
 #define TEST_READ_SEEK_BYTE 1
+#define TEST_LARGE_THEN_SMALL 1
+#define TEST_TOO_MANY_FILES 1
 
 int disk;
 char a[256] = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
@@ -67,6 +69,16 @@ int testPhaseTwo() {
    if(TEST_DELETE_FILE) {
       error = testDeleteFile();
       testForErrors(error);
+   }
+   
+   if (TEST_LARGE_THEN_SMALL) { 
+	   error = testLargeThenSmall();
+	   testForErrors(error);
+   }
+   
+   if (TEST_TOO_MANY_FILES) {
+	   error = testTooManyFiles();
+	   testForErrors(error);
    }
 
 }
@@ -150,6 +162,33 @@ int testWriteFile() {
    if(TEST_DELETE_FILE) {
       testDeleteFile(fd1, fd2);
    }
+}
+
+int testTooManyFiles() {
+	
+	printf("Creating too many files\n");
+	char buffer[2];
+	
+	for (int ndx = 0; ndx < 40; ndx++) {
+		memcpy(buffer, &ndx, 2);
+		
+	    fd1 = tfs_openFile(buffer);
+	    testForErrors(fd1); 
+	}
+	
+	for (int ndx = 0; ndx < 40; ndx++) {
+		memcpy(buffer, &ndx, 2);
+			
+	    error = tfs_deleteFile(buffer);
+	    testForErrors(error);
+	}
+	
+	printf("Deleting files\n");
+	  
+}
+
+int testLargeThenSmall() {
+	
 }
 
 int testOpenCloseFile() {
