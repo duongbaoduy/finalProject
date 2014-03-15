@@ -46,8 +46,8 @@ int main() {
    disk = openDisk("defaultDisk", 10240);
    testPhaseOne();
    testPhaseTwo();
-   testMakeRO();
-
+   testMakeRO(); // tests readOnly support
+   testDirectoryListingAndRenaming(); // tests directory listing and renaming
 
 }
 int testPhaseTwo() {
@@ -107,6 +107,18 @@ int testMakeRO() {
    if (error != 1) {
       printf("WRITEBYTE ERROR NUMBER %d\n", error);
    }
+}
+
+int testDirectoryListingAndRenaming() {
+   tfs_openFile("FileNameBeforeRenamed");
+   printf("Printing out files...\n");
+   tfs_readdir();
+   tfs_openFile("FileAdded");
+   printf("Printing out files...\n");
+   tfs_readdir();
+   tfs_rename("FileNameBeforeRenamed", "FileNameAfterRenamed");
+   printf("Printing out files...\n");
+   tfs_readdir();
 }
 
 int testReadSeek() {
