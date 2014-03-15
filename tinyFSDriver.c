@@ -47,6 +47,7 @@ int main() {
    testPhaseOne();
    testPhaseTwo();
    testMakeRO(); // tests readOnly support
+   testWriteByte(); // tests writeByte support
    testDirectoryListingAndRenaming(); // tests directory listing and renaming
 
 }
@@ -107,6 +108,45 @@ int testMakeRO() {
    if (error != 1) {
       printf("WRITEBYTE ERROR NUMBER %d\n", error);
    }
+}
+
+int testWriteByte() {
+   printf("Testing WriteByte...\n");
+   fileDescriptor tempFD = tfs_openFile("WriteByteFile");
+   if (tfs_writeByte(tempFD, 'x') != OUT_OF_BOUNDS_FLAG) { // should throw error because fileExtent doesn't exist
+      printf("WRITEBYTE TEST FAILED: Did not return out of bounds error");
+   }
+   tfs_writeFile(tempFD, a, 256);
+   tfs_seek(tempFD, 250);
+   
+   char *myString = "THISGetsReplaced";
+   char *temp = myString;
+   printf("Prints string to be edited by readByte: %s\n", myString);
+   tfs_readByte(tempFD, myString++);
+   tfs_readByte(tempFD, myString++);
+   tfs_readByte(tempFD, myString++);
+   tfs_readByte(tempFD, myString);
+   printf("Prints string after four readByte calls: %s\n", temp);
+   
+   printf("Now writing 'Z' bytes into file and reading those bytes into string...\n");
+   tfs_seek(tempFD, 250);
+   tfs_writeByte(tempFD, 'Z');
+   tfs_seek(tempFD, 251);
+   tfs_writeByte(tempFD, 'Z');
+   tfs_seek(tempFD, 252);
+   tfs_writeByte(tempFD, 'Z');
+   tfs_seek(tempFD, 253);
+   tfs_writeByte(tempFD, 'Z');
+   
+   tfs_seek(tempFD, 250);
+   myString = temp;
+   tfs_readByte(tempFD, myString++);
+   tfs_readByte(tempFD, myString++);
+   tfs_readByte(tempFD, myString++);
+   tfs_readByte(tempFD, myString);
+   
+   printf("Should have ZZZZ as first four characters of this string: %s\n", temp);
+   
 }
 
 int testDirectoryListingAndRenaming() {
