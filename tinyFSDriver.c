@@ -270,7 +270,7 @@ int testOpenCloseFile() {
       testForErrors(fd3); 
       
       printf("Printing Out File Time for File3\n");
-      tfs_readFileInfo(fd3) 
+      tfs_readFileInfo(fd3); 
 /*      
       printf("Closing File3\n");
       error = tfs_closeFile(fd3);
