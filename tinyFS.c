@@ -744,7 +744,7 @@ int tfs_rename(char *fileName, char* newName) {
    
    INode *iNode = findInodeRelatingToFileName(fileName, superBlock->rootInode);
   
-   if(checkMagicNumber(iNode->required.magicNumber)) {
+   if(checkMagicNumber(iNode->required.magicNumber) < 0) {
       return CORRUPTED_DATA_FLAG;
    }
  
