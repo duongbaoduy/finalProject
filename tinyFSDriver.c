@@ -7,7 +7,7 @@
 #define TEST_MAKE_MOUNT_UNMOUNT 1
 #define TEST_OPEN_CLOSE_FILE 1
 #define TEST_WRITE_FILE 1
-#define TEST_DELETE_FILE 0
+#define TEST_DELETE_FILE 1
 #define TEST_READ_SEEK_BYTE 1
 #define TEST_LARGE_THEN_SMALL 1
 #define TEST_TOO_MANY_FILES 1
@@ -59,29 +59,31 @@ int main() {
 
 }
 int testPhaseTwo() {
+   printf("\n");
    if(TEST_OPEN_CLOSE_FILE) {
       testOpenCloseFile();
-      testForErrors(error);
    }
+   printf("\n");
    if(TEST_WRITE_FILE) {
       error = testWriteFile();
       testForErrors(error);
    }
+   printf("\n");   
    if(TEST_READ_SEEK_BYTE) {
       error = testReadSeek();
       testForErrors(error);
    }
-   
+   printf("\n");   
    if(TEST_DELETE_FILE) {
       error = testDeleteFile();
       testForErrors(error);
    }
-   
+   printf("\n");   
    if (TEST_LARGE_THEN_SMALL) { 
 	  error = testLargeThenSmall();
 	   testForErrors(error);
    }
-   
+   printf("\n");   
    if (TEST_TOO_MANY_FILES) {
 	   error = testTooManyFiles();
 	   testForErrors(error);
@@ -131,51 +133,72 @@ int testTimeStamps() {
 }
 
 int testReadSeek() {
+   printf("Opening File11...\n");
+   fd1 = tfs_openFile("file11");
+   testForErrors(fd1);
+   
+   printf("Opening File22...\n");
+   fd2 = tfs_openFile("file22");
+   testForErrors(fd2);
+   
+   printf("Opening File33...\n");
+   fd3 = tfs_openFile("file33");
+   testForErrors(fd3);
+   
+   printf("Writing To File11...\n");
+   tfs_writeFile(fd1, a, 256);
+   
+   printf("Writing To File22...\n");
+   tfs_writeFile(fd2, b, 256);
+   
+   printf("Writing To File33...\n");
+   tfs_writeFile(fd3, c, 513);
+   
    char buffer[1];
-   printf("READING BYTE FROM FD1");
+   printf("Reading Byte From FD1...\n");
    error = tfs_readByte(fd1, buffer);
    testForErrors(error);
-   printf("BUFFER SHOULD BE A: %c\n", buffer[0]);
+   printf("Buffer Should Be A: %c\n", buffer[0]);
    
-   printf("READING BYTE FROM FD2");
+   printf("Reading Byte From FD2\n");
    error = tfs_readByte(fd2, buffer);
    testForErrors(error);
-   printf("BUFFER SHOULD BE B: %c\n", buffer[0]);
+   printf("Buffer Should be B: %c\n", buffer[0]);
     
-   printf("READING BYTE FROM FD3");
+   printf("Reading Byte From FD3...\n");
    error = tfs_readByte(fd3, buffer);
    testForErrors(error);
-   printf("BUFFER SHOULD BE K: %c\n", buffer[0]);
+   printf("Buffer Should Be K: %c\n", buffer[0]);
 
-   printf("SEEKINGBYTE FROM FD3\n");      
+   printf("Seeking Byte 13 from FD3...\n");      
    error = tfs_seek(fd3, 13);
    testForErrors(error);
  
-   printf("READING BYTE FROM FD3\n");
+   printf("Reading Byte From FD3...\n");
    error = tfs_readByte(fd3, buffer);
    testForErrors(error);
-   printf("BUFFER SHOULD BE D: %c\n", buffer[0]);
+   printf("Buffer Should be D: %c\n", buffer[0]);
   
-   printf("SEEKINGBYTE FROM FD3\n");      
+   printf("Seeking Byte 256 from FD3...\n");      
    error = tfs_seek(fd3, 256);
    testForErrors(error);
    
-   printf("READING BYTE FROM FD3\n");
+   printf("Reading Byte From FD3...\n");
    error = tfs_readByte(fd3, buffer);
    testForErrors(error);
-   printf("BUFFER SHOULD BE H: %c\n", buffer[0]);
+   printf("Buffer should be H: %c\n", buffer[0]);
 } 
 
 int testDeleteFile() {
-   printf("Deleting File1\n");
+   printf("Deleting File1...\n");
    error = tfs_deleteFile(fd1);
    testForErrors(error);   
    
-   printf("Deleting File2\n");
+   printf("Deleting File2...\n");
    error = tfs_deleteFile(fd2);
    testForErrors(error);        
    
-   printf("DELETING A FILE NOT IN SYSTEM\n");
+   printf("Deleting A File Not In Our System...\n");
    error = tfs_deleteFile(2566);
    testForErrors(error);  
 }
@@ -267,7 +290,7 @@ int testWriteFile() {
    error = tfs_writeFile(fd3, c, 513);
    testForErrors(error);  
       
-   printf("WRITING TO A FILE NOT IN SYSTEM\n");
+   printf("Writing To A File Not In Our System...\n");
    error = tfs_writeFile(2542, b, 256);
    testForErrors(error);  
    if(TEST_DELETE_FILE) {
@@ -277,7 +300,7 @@ int testWriteFile() {
 
 int testTooManyFiles() {
 	
-	printf("Creating too many files\n");
+	printf("Creating too many files...\n");
 	char buffer[2];
 	int files[40];
 	int ndx = 0;
@@ -289,39 +312,42 @@ int testTooManyFiles() {
 	    testForErrors(files[ndx]); 
 	}
 	
-	for (ndx = 0; ndx < 40; ndx++) {		
-	   error = tfs_deleteFile(files[ndx]);
+   printf("Deleting files FILE NOT FOUND Means When We Tried To Create The File We Did Not Have Enough Room...\n");
+	for (ndx = 0; ndx < 40; ndx++) {	
+	      error = tfs_deleteFile(files[ndx]);
 	   testForErrors(error);
 	}
-	
-	
-	printf("Deleting files\n");
 	  
 }
 
 int testLargeThenSmall() {
 	
-    printf("Creating Large File\n");
+    printf("Creating Large File...\n");
     fd3 = tfs_openFile("file3");
     testForErrors(fd3);  
-
-    printf("Printing Out File Time for Large File\n");
-    tfs_readFileInfo(fd3);
 
     error = tfs_writeFile(fd1, a, 1024);
     testForErrors(error);  
 	
 	tfs_displayFragments();
 	
-	printf("Creating Small File\n");
+	printf("Creating Small File...\n");
+	
+	   printf("Opening File11...\n");
+   fd1 = tfs_openFile("file11");
+   testForErrors(fd1);
+   
+   printf("Writing To File11...\n");
+   tfs_writeFile(fd1, a, 256);
 	
    error = tfs_writeFile(fd1, a, 100);
    testForErrors(error);  
-	
-	tfs_displayFragments();
-	
+	printf("Displaying Fragments S = SuperBlock,  I = Inode, FE = FileExtent, F = Free....\n");
+   tfs_displayFragments();
+   printf("Defraging FileSystem...\n\n");	
 	tfs_defrag();
-	
+
+	printf("Displaying Fragments S = SuperBlock,  I = Inode, FE = FileExtent, F = Free...\n");
 	tfs_displayFragments();
 	
     printf("Deleting Files\n");
@@ -331,70 +357,50 @@ int testLargeThenSmall() {
 }
 
 int testOpenCloseFile() {
-      printf("Opening File1\n");
+      printf("Opening File1...\n");
       fd1 = tfs_openFile("file1");
       testForErrors(fd1);  
       
-      printf("Printing Out File Time for File1\n");
-      tfs_readFileInfo(fd1);
       
-      printf("Opening File2\n");
+      printf("Opening File2...\n");
       fd2 = tfs_openFile("file2");
-      testForErrors(fd2);  
-      printf("Printing Out File Time for File2\n");
-      tfs_readFileInfo(fd2);
-/*      
-
-      printf("Closing File1\n");
-      tfs_closeFile(fd1);
-      testForErrors(fd1);  
-*/      
+      testForErrors(fd2);
+      
       printf("Opening File3\n");
       fd3 = tfs_openFile("file3");
       testForErrors(fd3); 
       
-      printf("Printing Out File Time for File3\n");
-      tfs_readFileInfo(fd3); 
-/*      
-      printf("Closing File3\n");
-      error = tfs_closeFile(fd3);
-      testForErrors(error);  
-      
-      printf("Closing File2\n");
-      error = tfs_closeFile(fd2);
-      testForErrors(error);  
-      printf("Closing File4 NOT A FILE IN OUR SYSTEM\n");
+      printf("Closing 123554 NOT A FILE IN OUR SYSTEM\n");
       error = tfs_closeFile(123554);
       testForErrors(error);  
-*/
+
 }
 
 int testMakeMountUnmount() {
-   printf("Making Disk\n");
+   printf("Making Disk...\n");
    error = tfs_mkfs("defaultDisk", 10240);
    testForErrors(error);  
  
-   printf("Mounting Disk\n");
+   printf("Mounting Disk...\n");
    error = tfs_mount("defaultDisk");
    testForErrors(error);  
    
-   printf("UnMounting Disk\n");
+   printf("UnMounting Disk...\n");
    error = tfs_unmount();
    testForErrors(error);  
    
-   printf("Mounting Disk\n");
+   printf("Mounting Disk...\n");
    error = tfs_mount("defaultDisk");
    testForErrors(error);  
-   
-   printf("Mounting Second Disk While First One Is Mounted\n");
+   printf("Mounting Disk That Doesn't Exist(SHOULD THROW ERROR)...\n");
    error = tfs_mount("secondFileDisk");
    testForErrors(error);  
    
-   printf("UnMounting Disk\n");
+   printf("UnMounting Disk...\n");
    error = tfs_unmount();
    testForErrors(error); 
    
-   printf("Mounting Disk\n");
+   printf("Mounting Disk...\n");
    error = tfs_mount("defaultDisk");
    testForErrors(error);  
 }
