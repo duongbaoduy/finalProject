@@ -185,14 +185,13 @@ char buffer[2];
 }
 
 int testDirectoryListingAndRenaming() {
-   tfs_openFile("Original");
    printf("Printing out files...\n");
    tfs_readdir();
-   tfs_openFile("Another");
-   printf("Printing out files...\n");
+   tfs_openFile("Original");
+   printf("Printing out files after adding file named Original...\n");
    tfs_readdir();
    tfs_rename("Original", "Renamed");
-   printf("Printing out files...\n");
+   printf("Printing out files after renaming file from Original to Renamed...\n");
    tfs_readdir();
 }
 
