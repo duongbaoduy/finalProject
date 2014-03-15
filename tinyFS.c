@@ -703,7 +703,6 @@ Returns success/error codes.*/
 int tfs_seek(fileDescriptor FD, int offset) {
    INode *iNode = findInodeRelatingToFile(FD, superBlock->rootInode);
    if(!iNode) {
-      printf("COULDNT FIND THE FILE :(\n");
       return FILE_NOT_FOUND;
    }
    
