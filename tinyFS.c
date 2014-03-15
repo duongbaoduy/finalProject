@@ -30,6 +30,7 @@
 
 #define FE_SIZE (sizeof(RequiredInfo) + sizeof(unsigned short) + sizeof(FileExtent *))
 
+SuperBlock *superBlocks = NULL;
 SuperBlock *superBlock;
 INode *rootINode;
 fileDescriptor disk;
@@ -135,7 +136,25 @@ initializing all data to 0x00, setting magic numbers, initializing and writing
 the superblock and inodes, etc. Must return a specified success/error code. */
 
 int tfs_mkfs(char *filename, int nBytes) {
-   
+	SuperBlock* temp = superBlocks;
+	int found = 0;
+	
+	// while(superBlocks != NULL, the current superBlock != filename, it has next one)
+	while (superBlocks && strcmp(superBlocks->filename, filename) &&  temp->next)
+	{
+		if (!strcmp(superBlocks->filename, filename)) {
+			found = 1;
+			break;
+		}
+		temp = temp->next; 
+	}
+	
+	if(found) {
+		return 1;
+	}
+	//if temp == null then superBlocks == null and ther are no superblocks in superblocks
+	//if temp != null and found == 0 then superblocks exists but doensn't contain filename
+	//if found then temp then temp is the correct one   
    int nonMountedDisk = openDisk(filename, nBytes);
   
    if(nonMountedDisk < 0) {
@@ -149,8 +168,7 @@ int tfs_mkfs(char *filename, int nBytes) {
          return READ_WRITE_ERROR;
       }
    }
-   
-   superBlock = calloc(sizeof(SuperBlock), 1);
+   SuperBlock *superBlock = calloc(sizeof(SuperBlock), 1);
    
    rootINode = makeInode(1, "rootNode", 0);
   
@@ -165,6 +183,8 @@ int tfs_mkfs(char *filename, int nBytes) {
    
    superBlock->required = requiredInfo;
    superBlock->rootInode = rootINode;
+   superBlock->name = filename;
+   superBlock->name[19] = '\0';
    
    FreeBlock *freeBlocks = NULL;
    int numFreeBlocks = 0;
@@ -192,7 +212,12 @@ int tfs_mkfs(char *filename, int nBytes) {
       printf("WRITE ERROR\n");
       return READ_WRITE_ERROR;
    }
-   
+   if(!superBlocks) {
+	   superBlocks = superBlock
+   }
+   else {
+      superBlock->next = superBlocks;
+  }
    return 1;
 }
 
@@ -204,26 +229,48 @@ to cleanly unmount the currently mounted file system. Must return a specified
 success/error code. */
 
 int tfs_mount(char *filename) {
+	
+	SuperBlock* temp = superBlocks;
+	int found = 0;
+	
+	// while(superBlocks != NULL, the current superBlock != filename, it has next one)
+	while (superBlocks && strcmp(superBlocks->filename, filename) &&  temp->next)
+	{
+		if (!strcmp(superBlocks->filename, filename)) {
+			found = 1;
+			break;
+		}
+		temp = temp->next; 
+	}
+    
+	if(!found) {
+		return DISK_ERROR;
+	}	
+	//if temp == null then superBlocks == null and ther are no superblocks in superblocks
+	//if temp != null and found == 0 then superblocks exists but doensn't contain filename
+	//if found then temp then temp is the correct one
+	
+	
    if(isMounted) {
       printf("WARNING UNMOUNTING PREVIOUS FILE SYSTEM\n");
    }
-  
+
    char buffer[BLOCKSIZE];
    int diskToCheck = openDisk(filename, DEFAULT_DISK_SIZE);
-   
+
    if(diskToCheck < 0) {
       return DISK_ERROR;
    }
    readBlock(diskToCheck, 0, buffer);
+
    
-   SuperBlock *superBlockToCheck = (SuperBlock *) buffer;
-   
-   if(superBlockToCheck->required.type != SUPERBLOCK_TYPE 
-      || superBlockToCheck->required.magicNumber != MAGIC_NUMBER) {
+
+   if(temp->required.type != SUPERBLOCK_TYPE 
+      || temp->required.magicNumber != MAGIC_NUMBER) {
        return DISK_ERROR;
    }
-   
-   if(checkForDiskError(diskToCheck, superBlockToCheck) < 0) {
+
+   if(checkForDiskError(diskToCheck, temp) < 0) {
       printf("FILE SYSTEM IS NOT IN A CONSISTANT STATE\n");
       return DISK_ERROR;
    }
@@ -232,12 +279,20 @@ int tfs_mount(char *filename) {
       for(i = 0; i < BLOCKSIZE; i++) {
          openFiles[i] = 0;
       }
-      
-      superBlock = superBlockToCheck;
+  
       tfs_unmount();
+      superBlock = temp;
       isMounted = 1;
       disk = diskToCheck;
    }
+   
+   if (superBlocks) {
+	   temp->next = superBlock;
+   }
+   else {
+      superBlocks = superBlock;
+   }
+   
    return 1;
 }
 int checkForDiskError(int diskToCheck, SuperBlock *superBlockToCheck) {
@@ -332,7 +387,6 @@ int tfs_unmount(void) {
    }
    isMounted = 0;
    superBlock = NULL;
-   rootINode == NULL;
    
    return 1;
 }
@@ -826,7 +880,7 @@ void tfs_defrag() {
 	
 	FreeBlock *freeBlock = superBlock->freeBlocks;
 	
-	for(; freeBlock && blockToPutIn; blockToPutIn++) {
+	for(; blockToPutIn; blockToPutIn++) {
 	   cleanBlock(blockToPutIn);
 	   freeBlock->required.blockNumber = blockToPutIn;
 	   freeBlock = freeBlock->next;
@@ -843,35 +897,21 @@ void tfs_displayFragments() {
 		int type = buffer[TYPE_OFFSET];
 		
 		if(type == SUPERBLOCK_TYPE) {
-			printf("%2s ", "S");
+			printf("S ");
 		}
 		else if(type == INODE_TYPE) {
-			printf("%2s ", "I");
+			printf("I ");
 		}
 		else if(type == FILE_EXTENT_TYPE) {
-			printf("%2s ", "FE");
+			printf("FE ");
 		}
 		else if(type == FREE_TYPE)  {
-			printf("%2s ", "F");
+			printf("F ");
 		}
 		
-		if((counter + 1) % 10  == 0) {
+		if(counter % 10  == 0) {
 			printf("\n");
 		}
 	}
-	
-int my_strcmp(char *str1, char *str2)
-{
-  int           i;
-
-  i = 0;
-  while (str1[i] || str2[i])
-    {
-      if (str1[i] != str2[i])
-        return (str1[i] - str2[i]);
-      i++;
-    }
-  return (0);
-}
 	
 }
