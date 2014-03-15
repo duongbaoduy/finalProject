@@ -824,7 +824,7 @@ int tfs_writeByte(fileDescriptor FD, unsigned int data) {
       return CORRUPTED_DATA_FLAG;
    }
    
-   if(iNode->size > 0 && iNode->filePointer >= iNode->size) {
+   if(iNode->filePointer >= iNode->size) {
       return OUT_OF_BOUNDS_FLAG;
    }
 
@@ -835,7 +835,7 @@ int tfs_writeByte(fileDescriptor FD, unsigned int data) {
    
    int blockNum = iNode->filePointer / (BLOCKSIZE - FE_SIZE);
    
-   if(iNode->filePointer % (BLOCKSIZE - FE_SIZE) == 0) {
+   if(iNode->filePointer % (BLOCKSIZE - FE_SIZE) == 0 && iNode->filePointer > 0) {
       blockNum++;
    }
    
@@ -846,7 +846,7 @@ int tfs_writeByte(fileDescriptor FD, unsigned int data) {
       blockNum--;
    }
 
-   memset(fileExtent + FE_SIZE + (iNode->filePointer % (BLOCKSIZE - FE_SIZE)), data, 1);
+   memset(&fileExtent->data[(iNode->filePointer % (BLOCKSIZE - FE_SIZE))], data, 1);
    writeBlock(disk, fileExtent->required.blockNumber, fileExtent);
    iNode->filePointer++;
    
