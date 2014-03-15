@@ -1,5 +1,6 @@
 #include<stdio.h>
 #include<stdlib.h>
+#include<string.h>
 #include "tinyFS.h"
 #include "TinyFS_errno.h"
 #define TEST_PHASE_ONE 0
@@ -54,7 +55,7 @@ int testPhaseTwo() {
       testForErrors(error);
    }
    if(TEST_OPEN_CLOSE_FILE) {
-      testOpenCloseFile();
+     // testOpenCloseFile();
       testForErrors(error);
    }
    if(TEST_WRITE_FILE) {
@@ -72,7 +73,7 @@ int testPhaseTwo() {
    }
    
    if (TEST_LARGE_THEN_SMALL) { 
-	   error = testLargeThenSmall();
+	  error = testLargeThenSmall();
 	   testForErrors(error);
    }
    
@@ -168,20 +169,24 @@ int testTooManyFiles() {
 	
 	printf("Creating too many files\n");
 	char buffer[2];
-	
-	for (int ndx = 0; ndx < 40; ndx++) {
-		memcpy(buffer, &ndx, 2);
+	int ndx = 0;
+	for (ndx = 0; ndx < 40; ndx++) {
+		memcpy(buffer, &ndx, 1);
+		buffer[1] = '\0';
+		
 		
 	    fd1 = tfs_openFile(buffer);
 	    testForErrors(fd1); 
 	}
-	
-	for (int ndx = 0; ndx < 40; ndx++) {
-		memcpy(buffer, &ndx, 2);
+	/*
+	for (ndx = 0; ndx < 40; ndx++) {
+		memcpy(buffer, &ndx, 1);
+		buffer[1] = '\0';
 			
-	    error = tfs_deleteFile(buffer);
-	    testForErrors(error);
+	   error = tfs_deleteFile(buffer);
+	   testForErrors(error);
 	}
+	*/
 	
 	printf("Deleting files\n");
 	  
