@@ -76,17 +76,17 @@ int testReadSeek() {
    printf("READING BYTE FROM FD1");
    error = tfs_readByte(fd1, buffer);
    testForErrors(error);
-   printf("BUFFER SHOULD BE A: %c\n", buffer[1]);
+   printf("BUFFER SHOULD BE A: %c\n", buffer[0]);
    
    printf("READING BYTE FROM FD2");
    error = tfs_readByte(fd2, buffer);
    testForErrors(error);
-   printf("BUFFER SHOULD BE B: %c\n", buffer[1]);
+   printf("BUFFER SHOULD BE B: %c\n", buffer[0]);
     
    printf("READING BYTE FROM FD3");
    error = tfs_readByte(fd3, buffer);
    testForErrors(error);
-   printf("BUFFER SHOULD BE K: %c\n", buffer[1]);
+   printf("BUFFER SHOULD BE K: %c\n", buffer[0]);
 
    printf("SEEKINGBYTE FROM FD3\n");      
    error = tfs_seek(fd3, 13);
@@ -95,7 +95,7 @@ int testReadSeek() {
    printf("READING BYTE FROM FD3\n");
    error = tfs_readByte(fd3, buffer);
    testForErrors(error);
-   printf("BUFFER SHOULD BE D: %c\n", buffer[1]);
+   printf("BUFFER SHOULD BE D: %c\n", buffer[0]);
   
    printf("SEEKINGBYTE FROM FD3\n");      
    error = tfs_seek(fd3, 256);
@@ -104,7 +104,7 @@ int testReadSeek() {
    printf("READING BYTE FROM FD3\n");
    error = tfs_readByte(fd3, buffer);
    testForErrors(error);
-   printf("BUFFER SHOULD BE i: %c\n", buffer[1]);
+   printf("BUFFER SHOULD BE H: %c\n", buffer[0]);
 
 } 
 
@@ -227,4 +227,3 @@ int testPhaseOne() {
       writeBlock(disk, 5, a);
    }
 }
-
