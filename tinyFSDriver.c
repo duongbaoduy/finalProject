@@ -1,6 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
+#include <unistd.h>
 #include "tinyFS.h"
 #include "TinyFS_errno.h"
 #define TEST_PHASE_ONE 0
@@ -126,6 +127,7 @@ int testTimeStamps() {
    printf("Printing Out TimeStamp info for newly created tempFile...\n");
    tfs_readFileInfo(tempFile);
    printf("Writing to tempFile and then printing out updated TimeStamp for tempFile...\n");
+   sleep(3);
    tfs_writeFile(tempFile, a, 20);
    tfs_readFileInfo(tempFile);
    tfs_deleteFile(tempFile);
