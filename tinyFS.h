@@ -1,8 +1,12 @@
 #ifndef TINYFS_H
 #define TINYFS_H
-/* The default size of the disk and file system block */
 #include <time.h>
+
 #define BLOCKSIZE 256
+#define DEFAULT_DISK_SIZE 10240
+#define DEFAULT_DISK_NAME “tinyFSDisk”         
+
+typedef int fileDescriptor;
 
 typedef struct RequiredInfo {
    unsigned char type;
@@ -44,17 +48,8 @@ typedef struct INode {
    time_t creation;
    time_t access;
    time_t modification;
-} INode;
+} INode;       
 
-/* Your program should use a 10240 Byte disk size giving you 40 blocks total. 
-This is a default size. You must be able to support different possible values */
-
-#define DEFAULT_DISK_SIZE 10240
-
-/* use this name for a default disk file name */
-#define DEFAULT_DISK_NAME “tinyFSDisk”         
-
-typedef int fileDescriptor;
 /* Makes a blank TinyFS file system of size nBytes on the file specified by 
 ‘filename’. This function should use the emulated disk library to open the 
 specified file, and upon success, format the file to be mountable. This includes 
