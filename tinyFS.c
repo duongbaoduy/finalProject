@@ -501,7 +501,6 @@ and removes table entry */
 int tfs_closeFile(fileDescriptor FD) {
    INode *iNode = findInodeRelatingToFile(FD, superBlock->rootInode);
    if(!iNode) {
-      printf("COULDNT FIND THE FILE :(\n"); // do we want to printf?
       return FILE_NOT_FOUND;
    }
    
@@ -529,7 +528,6 @@ int tfs_writeFile(fileDescriptor FD,char *buffer, int size) { // does writing wr
 
    INode *iNode = findInodeRelatingToFile(FD, superBlock->rootInode);
    if(!iNode) {
-      printf("COULDNT FIND THE FILE :(\n");
       return FILE_NOT_FOUND;
    }
    
@@ -619,7 +617,6 @@ int tfs_deleteFile(fileDescriptor FD) {
    INode *iNode = findInodeRelatingToFile(FD, superBlock->rootInode); // does not address same names, talk to stephen about that
    
     if(!iNode) {
-      printf("COULDNT FIND THE FILE :(\n");
       return FILE_NOT_FOUND;
    }
    
@@ -662,7 +659,6 @@ increment the file pointer. */
 int tfs_readByte(fileDescriptor FD, char *buffer) {
    INode *iNode = findInodeRelatingToFile(FD, superBlock->rootInode);
    if(!iNode || !(iNode->fileExtent)) {
-      printf("COULDNT FIND THE FILE :(\n");
       return FILE_NOT_FOUND;
    }
    
@@ -726,7 +722,6 @@ int tfs_seek(fileDescriptor FD, int offset) {
 int tfs_readFileInfo(fileDescriptor FD) {
    INode *iNode = findInodeRelatingToFile(FD, superBlock->rootInode);
    if(!iNode) {
-      printf("COULDNT FIND THE FILE :(\n");
       return FILE_NOT_FOUND;
    }
    
@@ -734,9 +729,10 @@ int tfs_readFileInfo(fileDescriptor FD) {
       return CORRUPTED_DATA_FLAG;
    }
    
-   printf("Creation Time: %s\n", ctime(&(iNode->creation)));
-
-   return 1;
+   printf("Creation Time: %s", ctime(&(iNode->creation)));
+   printf("Modification Time: %s", ctime(&(iNode->modification)));
+   printf("Access Time: %s\n", ctime(&(iNode->access)));
+   return iNode->creation;
 }
 
 int tfs_rename(char *fileName, char* newName) {
@@ -815,7 +811,6 @@ int tfs_writeByte(fileDescriptor FD, unsigned int data) {
 
    INode *iNode = findInodeRelatingToFile(FD, superBlock->rootInode);
    if(!iNode) {
-      printf("COULDNT FIND THE FILE :(\n");
       return FILE_NOT_FOUND;
    }
    
@@ -862,7 +857,7 @@ void tfs_defrag() {
 	int flag = 1;
 	char buffer[256];	
 	
-	for(currentBlock = 0; currentBlock < 10240 / 256; currentBlock++) {
+	for(currentBlock = 0; currentBlock < DEFAULT_DISK_SIZE / BLOCKSIZE; currentBlock++) {
 		readBlock(disk, currentBlock, buffer);
 		
 		if(flag && buffer[TYPE_OFFSET] == FREE_TYPE) {
@@ -881,10 +876,12 @@ void tfs_defrag() {
 	
 	FreeBlock *freeBlock = superBlock->freeBlocks;
 	
-	for(; freeBlock && blockToPutIn; blockToPutIn++) {
+	for(; blockToPutIn < DEFAULT_DISK_SIZE / BLOCKSIZE; blockToPutIn++) {
 	   cleanBlock(blockToPutIn);
-	   freeBlock->required.blockNumber = blockToPutIn;
-	   freeBlock = freeBlock->next;
+	   if(freeBlock) {
+	      freeBlock->required.blockNumber = blockToPutIn;
+	      freeBlock = freeBlock->next;
+	  }
 	}
 }
 
