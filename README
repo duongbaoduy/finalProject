@@ -22,5 +22,19 @@ File System Consistency Checks
 
 
 They are tested with our driver. You will see a printf and then the results. If there is an error, an error message will be printed out.
+Each extra feature that we implemented has it's own test method called in the main in our test driver except for defrag.
+Defrag testing is contained in the phaseTwo() test method in our driver which is called in the main as well.
+PhaseTwo() tests the functions that were required of everyone for TinyFS.
 
-We were not able to find any bugs with our thorough testing. 
+No bugs were detected through our testing. 
+
+
+TO MAKE MAKEFILE RUN THESE COMMANDS:
+
+make tinyFsDemo
+tinyFSDemo
+
+
+TO CLEAN:
+
+make clean
